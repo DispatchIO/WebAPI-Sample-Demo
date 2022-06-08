@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta id="i18n_pagename" content="common">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Dispatch WebSDK API Smaple Demo</title>
+  <link rel="stylesheet" href="./assets/bootstrap.min.css">
+  <link rel="stylesheet" href="./assets/index.css">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-57262777-1"></script>
+  <base target="_blank" />
+</head>
+
+<body>
+  <div class="container-fluid banner">
+    <p class="banner-text">Dispatch WebSDK API Smaple Demo</p>
+    <a style="color: rgb(255, 255, 255);fill: rgb(255, 255, 255);fill-rule: evenodd; position: absolute; right: 10px; top: 4px;"
+      class="Header-link " href="https://github.com/DispatchIO/WebAPI-Sample-Demo/tree/master">
+      <svg class="octicon octicon-mark-github v-align-middle" height="32" viewBox="0 0 16 16" version="1.1" width="32"
+        aria-hidden="true">
+        <path fill-rule="evenodd"
+          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+        </path>
+      </svg>
+    </a>
+  </div>
+  <div class="float-left">
+    <nav class="navbar bg-light">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <div>
+                    <span><a class="nav-link" href="#1"><label class="i18n" name="basic">基础示例</label></a></span>
+                    <ul>
+                    </ul>
+                </div>
+            </li>
+            <li class="nav-item">
+                <div>
+                    <span><a class="nav-link" href="#2"><label class="i18n" name="advanced">进阶示例</label></a></span>
+                    <ul>
+                    </ul>
+                </div>
+            </li>
+            <li class="nav-item">
+                <div>
+                    <span><a class="nav-link" href="#3"><label class="i18n" name="addresslist">通讯录</label></a></span>
+                    <ul>
+                    </ul>
+                </div>
+            </li>
+            <li class="nav-item">
+                <div>
+                    <span><a class="nav-link" href="#4"><label class="i18n" name="scenarios">场景</label></a></span>
+                    <ul>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+    </nav>
+  </div>
+
+  <div class="container">
+      <h1 id="1"><label class="i18n" name="basic">基础示例</label></h1>
+      <div class="card-deck">
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="basicLogin">用户登录</label></h5>
+                  <p class="card-text"><label class="i18n" name="basicLoginNote"></label></p>
+                  <a href="./basicLogin/index.html" class=" btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="eventSubscribe">事件订阅</label></h5>
+                  <p class="card-text"><label class="i18n" name="eventSubscribeNote"></label></p>
+                  <a href="./eventSubscribe/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="callQueueList">获取用户呼入队列</label></h5>
+                  <p class="card-text"><label class="i18n" name="callQueueListNote"></label></p>
+                  <a href="./callQueueList/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="callConnstatusList">获取用户号码状态</label></h5>
+                  <p class="card-text"><label class="i18n" name="callConnstatusListNote"></label></p>
+                  <a href="./callConnstatusList/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="basicvoicecalling">语音通话</label></h5>
+                  <p class="card-text"><label class="i18n" name="basicvoicecallingnote"></label></p>
+                  <a href="./basicVoiceCall/index.html" class=" btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="basicvideocalling">视频通话</label></h5>
+                  <p class="card-text"><label class="i18n" name="basicvideocallingnote"></label></p>
+                  <a href="./basicVideoCall/index.html" class=" btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="clearCall">通话挂断</label></h5>
+                  <p class="card-text"><label class="i18n" name="clearCallnote"></label></p>
+                  <a href="./clearCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="clearConnection">通话拆线</label></h5>
+                  <p class="card-text"><label class="i18n" name="clearConnectionNote"></label></p>
+                  <a href="./clearConnection/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="answerCall">通话应答</label></h5>
+                  <p class="card-text"><label class="i18n" name="answerCallNote"></label></p>
+                  <a href="./answerCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="holdCall">呼叫保持</label></h5>
+                  <p class="card-text"><label class="i18n" name="holdCallNote"></label></p>
+                  <a href="./holdCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="transferCallSingle">呼叫转移</label></h5>
+                  <p class="card-text"><label class="i18n" name="transferCallSingleNote"></label></p>
+                  <a href="./transferCallSingle/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="transferCall">呼叫转接</label></h5>
+                  <p class="card-text"><label class="i18n" name="transferCallNote"></label></p>
+                  <a href="./transferCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="forceInsertCall">强插/强拆/强断/监听</label></h5>
+                  <p class="card-text"><label class="i18n" name="forceInsertCallNote"></label></p>
+                  <a href="./forceInsertCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="broadcastCall">呼叫广播</label></h5>
+                  <p class="card-text"><label class="i18n" name="broadcastCallNote"></label></p>
+                  <a href="./broadcastCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="rollCall">点名</label></h5>
+                  <p class="card-text"><label class="i18n" name="rollCallNote"></label></p>
+                  <a href="./rollCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="pollCall">轮询</label></h5>
+                  <p class="card-text"><label class="i18n" name="pollCallNote"></label></p>
+                  <a href="./pollCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+          <div class="card demo-card">
+              <div class="card-body">
+                  <h5 class="card-title"><label class="i18n" name="advanceCall">强呼</label></h5>
+                  <p class="card-text"><label class="i18n" name="advanceCallNote"></label></p>
+                  <a href="./advanceCall/index.html" class="btn btn-primary demo-card-btn">
+                      <label class="i18n"
+                             name="tryitnow">立即测试</label>
+                  </a>
+              </div>
+          </div>
+      </div>
+      <div class="container">
+          <h1 id="2"><label class="i18n" name="advanced">进阶示例</label></h1>
+          <div class="card-deck">
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomList">获取会议列表</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomListNote"></label></p>
+                      <a href="./conferenceroomList/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomGet">获取会议详细信息</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomGetNote"></label></p>
+                      <a href="./conferenceroomGet/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomMember"></label>获取会议成员</h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomMemberNote"></label></p>
+                      <a href="./conferenceroomMember/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomCreate">创建会议</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomCreateNote"></label></p>
+                      <a href="./conferenceroomCreate/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="joinmeetCall">加入会议</label></h5>
+                      <p class="card-text"><label class="i18n" name="joinmeetCallNote"></label></p>
+                      <a href="./joinmeetCall/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="groupCall">组呼</label></h5>
+                      <p class="card-text"><label class="i18n" name="groupCallNote"></label></p>
+                      <a href="./groupCall/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="selectCall">选呼</label></h5>
+                      <p class="card-text"><label class="i18n" name="selectCallNote"></label></p>
+                      <a href="./selectCall/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomLock">会议锁定</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomLockNote"></label></p>
+                      <a href="./conferenceroomLock/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomBroadcast">会议广播</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomBroadcastNote"></label></p>
+                      <a href="./conferenceroomBroadcast/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomSpeak">会议发言/禁言</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomSpeakNote"></label></p>
+                      <a href="./conferenceroomSpeak/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomKick">会议踢出</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomKickNote"></label></p>
+                      <a href="./conferenceroomKick/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomDestroy">结束会议</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomDestroyNote"></label></p>
+                      <a href="./conferenceroomDestroy/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="openVideo">打开视频监控</label></h5>
+                      <p class="card-text"><label class="i18n" name="openVideoNote"></label></p>
+                      <a href="./openVideo/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="ptzControl">云台控制</label></h5>
+                      <p class="card-text"><label class="i18n" name="ptzControlNote"></label></p>
+                      <a href="./ptzControl/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="conferenceroomMix">视频会商</label></h5>
+                      <p class="card-text"><label class="i18n" name="conferenceroomMixNote"></label></p>
+                      <a href="./conferenceroomMix/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="videoDispense">视频分发</label></h5>
+                      <p class="card-text"><label class="i18n" name="videoDispenseNote"></label></p>
+                      <a href="./videoDispense/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="getVideoRtspUrl">获取通话视频图像</label></h5>
+                      <p class="card-text"><label class="i18n" name="getVideoRtspUrlNote"></label></p>
+                      <a href="./getVideoRtspUrl/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n"
+                                 name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <div class="container">
+          <h1 id="3"><label class="i18n" name="addresslist">短信 传真 定位</label></h1>
+          <div class="card-deck">
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="smsList">获取短信列表</label></h5>
+                      <p class="card-text"><label class="i18n" name="smsListNote"></label></p>
+                      <a href="./smsList/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="smsGet">获取短信详细信息</label></h5>
+                      <p class="card-text"><label class="i18n" name="smsGetNote"></label></p>
+                      <a href="./smsGet/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="smsSend">短信发送</label></h5>
+                      <p class="card-text"><label class="i18n" name="smsSendNote"></label></p>
+                      <a href="./smsSend/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="smsRead">短信已读</label></h5>
+                      <p class="card-text"><label class="i18n" name="smsReadNote"></label></p>
+                      <a href="./smsRead/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="faxList">获取传真列表</label></h5>
+                      <p class="card-text"><label class="i18n" name="faxListNote"></label></p>
+                      <a href="./faxList/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="faxGet">获取传真详细信息</label></h5>
+                      <p class="card-text"><label class="i18n" name="faxGetNote"></label></p>
+                      <a href="./faxGet/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="faxSend">传真发送</label></h5>
+                      <p class="card-text"><label class="i18n" name="faxSendNote"></label></p>
+                      <a href="./faxSend/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="faxRead">传真已读</label></h5>
+                      <p class="card-text"><label class="i18n" name="faxReadNote"></label></p>
+                      <a href="./faxRead/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="gpsSubscribe">定位位置订阅</label></h5>
+                      <p class="card-text"><label class="i18n" name="gpsSubscribeNote"></label></p>
+                      <a href="./gpsSubscribe/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="gpsLast">获取最新位置信息</label></h5>
+                      <p class="card-text"><label class="i18n" name="gpsLastNote"></label></p>
+                      <a href="./gpsLast/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="gpsHistory">获取历史位置信息</label></h5>
+                      <p class="card-text"><label class="i18n" name="gpsHistoryNote"></label></p>
+                      <a href="./gpsHistory/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <div class="container">
+          <h1 id="4"><label class="i18n" name="addresslist">通讯录</label></h1>
+          <div class="card-deck">
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="groupvideocalling">部门查询</label></h5>
+                      <p class="card-text"><label class="i18n" name="groupvideocallingnote"></label></p>
+                      <a href="./customVideoSource/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="groupvideocalling">部门维护</label></h5>
+                      <p class="card-text"><label class="i18n" name="groupvideocallingnote"></label></p>
+                      <a href="./customVideoSource/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="groupvideocalling">用户查询</label></h5>
+                      <p class="card-text"><label class="i18n" name="movietogethernote"></label></p>
+                      <a href="./customVideoSource/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="groupvideocalling">用户维护</label></h5>
+                      <p class="card-text"><label class="i18n" name="movietogethernote"></label></p>
+                      <a href="./customVideoSource/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <div class="container">
+          <h1 id="5"><label class="i18n" name="scenarios">场景</label></h1>
+          <div class="card-deck">
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="customConferenceMultiCall">一场会议</label></h5>
+                      <p class="card-text"><label class="i18n" name="customConferenceMultiCallNote"></label></p>
+                      <a href="./customConferenceMultiCall/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="customBroadcastCall">语音通知</label></h5>
+                      <p class="card-text"><label class="i18n" name="customBroadcastCallNote"></label></p>
+                      <a href="./customBroadcastCall/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="customSmsNotify">短信通知</label></h5>
+                      <p class="card-text"><label class="i18n" name="customSmsNotifyNote"></label></p>
+                      <a href="./customSmsNotify/index.html" class="btn btn-primary demo-card-btn">
+                          <label class="i18n" name="tryitnow">立即测试</label>
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <div class="container">
+          <h1 id="6"><label class="i18n" name="faq">常见问题</label></h1>
+          <div class="card-deck">
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="question1"></label></h5>
+                      <p class="card-text"><label class="i18n" name="question1Note"></label></p>
+                      <a href=""
+                         class="btn btn-primary demo-card-btn">检查问题</a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="question2"></label></h5>
+                      <p class="card-text"><label class="i18n" name="question12Note"></label></p>
+                      <a href=""
+                         class="btn btn-primary demo-card-btn">检查问题</a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="question3"></label></h5>
+                      <p class="card-text"><label class="i18n" name="question3Note"></label></p>
+                      <a href=""
+                         class="btn btn-primary demo-card-btn">检查问题</a>
+                  </div>
+              </div>
+              <div class="card demo-card">
+                  <div class="card-body">
+                      <h5 class="card-title"><label class="i18n" name="question4"></label></h5>
+                      <p class="card-text"><label class="i18n" name="question4Note"></label></p>
+                      <a href=""
+                         class="btn btn-primary demo-card-btn">检查问题</a>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <script src="./assets/jquery-3.4.1.min.js"></script>
+      <script src="./assets/jquery.cookie.js"></script>
+      <script src="./assets/jquery.i18n.properties-min.js"></script>
+      <script src="./assets/bootstrap.bundle.min.js"></script>
+      <script>
+          $(document).ready(function () {
+              var headHeight = 200;
+              var nav = $(".navbar");
+              console.log($(window).width());
+              if ($(window).width() < 15000) {
+                  console.log("hide!");
+                  nav.parent().hide();
+                  return;
+              }
+              $(window).scroll(function () {
+                  if ($(this).scrollTop() > headHeight) {
+                      nav.addClass("navFix");
+                  }
+                  else {
+                      nav.removeClass("navFix");
+                  }
+              })
+              $(window).resize(function () {
+                  nav = $(".navbar");
+                  if ($(window).width() < 1500) {
+                      nav.hide();
+                      return;
+                  }
+                  else {
+                      nav.show()
+                  }
+              })
+          })
+      </script>
+</body>
+
+</html>
