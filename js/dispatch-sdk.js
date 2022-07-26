@@ -34,6 +34,7 @@
           if (!token) return Promise.reject('用户未登录');
           config.headers.access_token = token;
         }
+
         return config;
       },
       (error) => {
@@ -44,6 +45,8 @@
     // 添加响应拦截器
     instance.interceptors.response.use(
       (response) => {
+        Util.reqLog(response.config, response.data);
+
         if (response.data.code === 403 || response.data.code === 480) {
           DispRTC.client &&
             DispRTC.client.emit(EventType.LOGIN_STATUS, {
@@ -56,7 +59,6 @@
         } else if (response.data.code !== 200) {
           return Promise.reject(response.data);
         } else {
-          // console.log('response.data', response.config.url, response.data);
           return Promise.resolve(response.data);
         }
       },
@@ -68,9 +70,141 @@
   };
 
   /**
+   * 日志打印
+   */
+  window.log = (group, ...args) => {
+    if (args.length === 0 || DispRTC.options?.debug !== true) return;
+
+    if (args.length > 0) {
+      console.group(group);
+      if (Util.isCef) {
+        args.forEach((e) => {
+          try {
+            console.info(JSON.stringify(data));
+          } catch (error) {
+            console.info(data);
+          }
+        });
+      } else {
+        args.forEach((e) => console.table(e));
+      }
+      console.groupEnd();
+    } else {
+      if (Util.isCef) {
+        try {
+          console.info(JSON.stringify(group));
+        } catch (error) {
+          console.info(group);
+        }
+      } else console.table(group);
+    }
+  };
+
+  /**
    * 工具类
    */
   class Util {
+    static isCef = navigator.userAgent.toLowerCase().includes('mycef');
+
+    /**
+     * 请求日志打印
+     * @param {Object} config 请求设置
+     * @param {Object} repData 请求返回结果
+     * @param {Array} ext 拓展打印信息
+     * @param {Array} skin 皮肤数组
+     * @param {Boolean} showDefSkin 是否显示默认配色
+     */
+    static reqLog(config, repData, ext = [], skin = [], showDefSkin = true) {
+      if (DispRTC.options?.debug !== true) return;
+
+      // 皮肤样式rbg色值
+      const defaultSkin = [
+        [244, 98, 134],
+        [9, 176, 233],
+        [171, 146, 212],
+        [169, 193, 0],
+        [51, 60, 130],
+        [252, 169, 127],
+        [140, 10, 229],
+        [99, 190, 205],
+      ];
+      const logSkin = skin.length ? skin : defaultSkin;
+      // 日志样式
+      const logStyle = (color, size) => {
+        return [
+          `color: rgb(${color.join(',')})`,
+          `font-size: ${size}px`,
+          `text-shadow: 1px 1px 3px rgba(${color.join(',')}, .6)`,
+        ].join(';');
+      };
+      // 随机生成rgb颜色
+      const generateColor = () => {
+        return new Array(3).fill(0).map(() => Math.ceil(Math.random() * 255));
+      };
+      // 打印信息
+      let infoGroup = [
+        {
+          label: '请求接口',
+          size: 12,
+          content: config.url,
+        },
+        {
+          label: '请求方法',
+          size: 12,
+          content: config.method.toUpperCase(),
+        },
+        {
+          label: '请求参数',
+          size: 12,
+          content: config.params || '',
+        },
+        {
+          label: '请求数据',
+          size: 12,
+          content: config.data || '',
+        },
+        // {
+        //   label: '请求头部',
+        //   size: 12,
+        //   content: JSON.stringify(config.headers),
+        // },
+        {
+          label: '状态码',
+          size: 12,
+          content: repData?.code,
+        },
+        {
+          label: '响应消息',
+          size: 12,
+          content: repData?.msg,
+        },
+        {
+          label: '响应数据',
+          size: 12,
+          content: repData?.data ? JSON.stringify(repData?.data) : '',
+        },
+        {
+          label: '请求时间',
+          size: 12,
+          content: new Date().toLocaleString(),
+        },
+        ...ext,
+      ];
+      infoGroup = infoGroup.map((item, index) => {
+        item.color = showDefSkin
+          ? logSkin[index + 1 > logSkin.length ? (index + 1) % logSkin.length : index]
+          : generateColor();
+        return item;
+      });
+      console.group(config.url);
+      for (const key in infoGroup) {
+        const { label, color, size, content } = infoGroup[key];
+        if (this.isCef) console.info(`${label}: ${content}`);
+        else console.info(`%c${label}: %s`, logStyle(color, size), content);
+      }
+      console.groupEnd();
+    }
+
     /**
      * Aes 加密
      * @param {String} message 加密内容
@@ -99,32 +233,7 @@
      * @param {String} str 加密内容
      */
     static base64Encrypt(str) {
-      console.log('base64Encrypt', str);
       return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str));
-    }
-
-    /**
-     * 对用户名和密码进行自定义签名
-     * @param {String} str 加密内容
-     * @param {String} key 秘钥
-     */
-    static sign1(str, key = '') {
-      let secretKey = key;
-      if (secretKey.length > 16) {
-        secretKey = secretKey.substring(secretKey.length - 16);
-      }
-      while (secretKey.length < 16) {
-        secretKey = '0' + secretKey;
-      }
-      let aesStr = CryptoJS.AES.encrypt(
-        str + '@' + key + '@' + '20220518143201', //时间格式yyyyMMddHHmmss
-        CryptoJS.enc.Utf8.parse(secretKey),
-        {
-          mode: CryptoJS.mode.ECB,
-          padding: CryptoJS.pad.Pkcs7,
-        }
-      ).toString();
-      return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str + ':' + aesStr));
     }
 
     /**
@@ -164,13 +273,16 @@
     }
 
     /**
-     * 判断对象是否为空，包含undefinded,'',null, {},[]
+     * 判断对象是否为空，包含undefined,'',null, {},[]
      * @param {*} obj
      * @returns
      */
     static isEmpty(obj) {
+      if (obj === undefined || obj === null) return true;
       if (typeof obj === 'boolean' || typeof obj === 'number') return false;
-      if (!obj) return true;
+      if (typeof obj === 'string') {
+        return !obj.trim();
+      }
       return Object.keys(obj).length === 0;
     }
   }
@@ -530,6 +642,8 @@
      */
     static client = null;
 
+    static options = {};
+
     static EventType = EventType; //事件集合枚举
     static DataAction = DataAction; //数据操作动作
     static GroupType = GroupType; //组类型
@@ -559,12 +673,10 @@
      * @returns
      */
     static createClient(options = {}) {
-      console.log('createClient');
-      if (options.proxy && options.proxyV2) {
-        //TODO
-        let server = location.origin;
-        http = createAxois(server + '/v2');
-        options.server = server;
+      if (options.proxy) {
+        options.server = location.origin;
+        http = createAxois(options.server + '/v2');
+        // options.server = server;
       } else {
         if (!options.server) {
           throw new Error('服务器地址不能为空');
@@ -580,11 +692,15 @@
         console.warn('浏览器不支持该SDK');
       }
 
-      if (!options.proxyV2) {
-        options.server = location.origin; //TODO
-      }
+      // if (!options.proxyV2) {
+      //   options.server = location.origin; //TODO
+      // }
+
+      this.options = options;
 
       this.client = new DispRTC.Client(options);
+
+      if (!Util.isEmpty(options.token)) Store.set({ name: 'token', content: options.token });
 
       this.client.initData();
       return this.client;
@@ -597,7 +713,6 @@
      * @returns
      */
     static createRTSPStream(options = {}) {
-      console.log('createRTSPtream');
       if (!options.server) {
         if (this.client) options.server = this.client.server;
         else {
@@ -621,7 +736,6 @@
      */
     static async destroy() {
       DispRTC.Client.wsClient && DispRTC.Client.wsClient.close();
-      // console.log('DispRTC destroy', this.client, this.client.token);
       if (this.client && this.client.token) {
         try {
           await this.client.logout();
@@ -706,7 +820,6 @@
         });
         return null;
       }
-      console.log('DispRTC.client.server', DispRTC.client.server);
       let ws = (this.ws = io(DispRTC.client.server, {
         transports: ['websocket'],
         path: '/socket.io',
@@ -733,7 +846,6 @@
       //接收上报事件
       ws.on(this.token, (data) => {
         // console.log('socket token', JSON.stringify(data));
-        // console.log('socket token', data.eventType, data);
         if (DispRTC.client && DispRTC.client === this.client) {
           this.handleMsg(data);
           this.client.emit(data.eventType, data);
@@ -775,8 +887,10 @@
     }
 
     handleDeviceStatus(data) {
+      data = data.data;
       let { mainTel, viceTel } = this.client.operatorInfo;
-      if (data.localDevice === mainTel || data.localDevice === viceTel) {
+      // console.warn('handleDeviceStatus', data, this.client.telStatus);
+      if (!Util.isEmpty(data.localDevice) && (data.localDevice === mainTel || data.localDevice === viceTel)) {
         this.client.telStatus[data.localDevice] = data.localState;
       }
     }
@@ -809,6 +923,9 @@
       this.callSession = new CallSessions(this);
       this.videoSession = new VideoSessions(this);
       this.conferenceRoom = new ConferenceRoom(this);
+      this.smsSessions = new SmsSessions(this);
+      this.faxSessions = new FaxSessions(this);
+      this.location = new Location(this);
       this.dataStorage = new DataStorage(this);
       this.file = new File(this);
       this.eventMap = {}; //事件集合
@@ -844,7 +961,7 @@
      * 绑定事件
      * @param {String} name 事件名称,为后台上报的事件名称
      * @param {Function} fn 回调函数
-     */
+     */ å;
     on(name, fn) {
       //只有事件名称存在才绑定
       if (name && Object.values(EventType).includes(name) && typeof fn === 'function') {
@@ -979,7 +1096,7 @@
           user_name: username,
           signature: Util.sign(username, password),
         };
-        console.log('login', username, password, Util.sign(username, password));
+
         Api.User.login(form)
           .then((res) => {
             this.token = res.data.access_token;
@@ -1016,13 +1133,12 @@
             this.telStatus = {};
             mainTel &&
               this.callSession.getCallConnStatus(mainTel).then((res) => {
-                this.telStatus[this.mainTel] = res.data.localState;
+                this.telStatus[mainTel] = res.data.localState;
               });
             viceTel &&
               this.callSession.getCallConnStatus(viceTel).then((res) => {
-                this.telStatus[this.viceTel] = res.data.localState;
+                this.telStatus[viceTel] = res.data.localState;
               });
-            console.log(' this.telStatus', this.telStatus);
           })
           .catch((err) => {
             reject(err);
@@ -1094,7 +1210,7 @@
               }
             });
             res.data.list = list;
-            console.log('listSoftPhoneConfig', res.data.list);
+
             resolve(res);
           })
           .catch((err) => {
@@ -1112,15 +1228,12 @@
           let e = list[i];
           if (e.ID) {
             let update = {
+              ID: e.ID,
               operatorID: e.operatorID,
               phone: e.phone,
               password: e.password,
               enabled: e.enabled,
               phoneType: 'phone',
-              sipHost: '',
-              wsPort: '',
-              wsHost: '',
-              wsPort: '',
             };
             await Api.Data.SoftPhone.edit(update)
               .then((res) => {
@@ -1150,10 +1263,6 @@
               password: e.password,
               enabled: e.enabled,
               phoneType: 'phone',
-              sipHost: '',
-              wsPort: '',
-              wsHost: '',
-              wsPort: '',
             };
             await Api.Data.SoftPhone.add(add)
               .then((res) => {
@@ -1227,7 +1336,6 @@
         old.handleType = handleType;
         return;
       }
-      // console.log('softPhoneRegister', config);
       // 创建对象
       let rtcStream = new DispRTC.RTCStream({
         phone: config.phone,
@@ -1388,6 +1496,8 @@
      * @param {*} sessionEvent
      */
     constructor(options) {
+      DispRTC.RTCStream.client = options.client;
+
       this.client = options.client;
       this.handleType = options.handleType; //手柄类型，左右手柄
       this.phone = options.phone || null; //号码
@@ -1399,6 +1509,8 @@
       this.videoFrameRate = 30;
       this.videoResolution = 1280;
       this.isInited = false;
+
+      this.loginFail = false;
 
       this.videoRemote = null; // 远端视频
       this.videoLocal = null; // 本地视频
@@ -1611,20 +1723,22 @@
         }
 
         this.webrtcStackNode = new DispRTC.RTCStream.WebrtcStack(
+          this,
           this.wsServer,
           this.phone,
           this.password,
           (event) => {
             this.webrtcstackCallback.call(this, event);
           },
-          this.iceservers
+          this.iceservers,
+          this.client
         );
         DispRTC.RTCStream.instances.set(this.phone, this);
         DispRTC.RTCStream.webrtc2SipEnabled = true;
         this.name = this.phone; // webrtc2sip名称，用号码表示
         return Promise.resolve(R.ok());
       } catch (e) {
-        console.log('register', e);
+        console.log('软电话注册失败 err', e);
         this.unRegister();
         this.webrtcStackNode = null;
         console.warn(`软电话:${this.name}注册失败`);
@@ -1641,7 +1755,6 @@
     }
 
     sipCall(callType, phoneNumber) {
-      console.log('sipCall');
       var hasVideo = false;
       var hasHalf = false;
       var local = null;
@@ -1737,7 +1850,7 @@
       if (this.webrtcStackNode == null) {
         return false;
       }
-      console.log('sipAnswer', this);
+
       if (this.callType === 'audio/video') {
         videoLocal = videoLocal instanceof HTMLElement ? videoLocal : document.getElementById(videoLocal);
         videoRemote = videoRemote instanceof HTMLElement ? videoRemote : document.getElementById(videoRemote);
@@ -1791,7 +1904,6 @@
      */
     playVideo(mudle) {
       try {
-        console.log('webrtc playVideo', this.videoLocal, this.videoRemote);
         if (mudle) {
           this.videoLocalMap.get(mudle) && this.videoLocalMap.get(mudle).play();
           this.videoRemoteMap.get(mudle) && this.videoRemoteMap.get(mudle).play();
@@ -1817,12 +1929,17 @@
     }
 
     sessionEventFun(event) {
-      console.error('-------sessionEventFun--------', event);
+      console.error('-------sessionEventFun--------', JSON.stringify(event));
       if (this.client && this.client.isLogin()) this.emit(event.type, event);
     }
 
     webrtcstackCallback(msg) {
       switch (msg.type) {
+        case RTCStreamEventType.LOGIN:
+          if (msg.result === false) {
+            this.loginFail = true;
+          }
+          break;
         case RTCStreamEventType.ON_HANGUP:
           this.clearVideoDom();
           break;
@@ -1841,6 +1958,7 @@
           break;
         case RTCStreamEventType.ON_DISCONNECT:
           this.unRegister();
+          console.warn('ON_DISCONNECT', this.name, this.client.telStatus);
           this.client.telStatus[this.name] = DeviceState.OFFLINE;
           this.client.emit(EventType.ALL, {
             eventType: EventType.CALL_CONN_STATUS_EVENT,
@@ -1873,15 +1991,19 @@
   };
 
   DispRTC.RTCStream.WebrtcStack = class {
-    constructor(wsurl, tel, passwd, sessionEvent, iceservers) {
+    constructor(rtcStream, wsurl, tel, passwd, sessionEvent, iceservers, client) {
       if (!wsurl.endsWith('/')) {
         wsurl = wsurl + '/';
       }
+      this.rtcStream = rtcStream;
+      this.client = client;
       this.wsurl = wsurl + 'webrtcMedia';
       this.tel = tel;
       this.passwd = passwd;
       this.WSStatus = false;
       this.onMessage = sessionEvent;
+
+      this.heartTimeout = 20000;
 
       this.regStatus = false;
 
@@ -1897,24 +2019,24 @@
       this.setRemoteSdp = false;
 
       this.ringbacktone = new Audio('/sounds/ringbacktone.wav');
+      this.ringbacktone.autoplay = false;
       this.ringbacktone.loop = true;
       this.ringbacktone.muted = true;
+      this.ringbacktone.addEventListener('play', () => {
+        console.error('ringbacktone play');
+        this.ringbacktone.muted = false;
+      });
+
       this.ringtone = new Audio('/sounds/ringtone.wav');
+      this.ringtone.autoplay = false;
       this.ringtone.loop = true;
       this.ringtone.muted = true;
-
-      document.body.addEventListener(
-        'mousedown',
-        () => {
-          this.ringbacktone.muted = false;
-          this.ringtone.muted = false;
-        },
-        false
-      );
+      this.ringtone.addEventListener('play', () => {
+        console.error('ringtone play');
+        this.ringtone.muted = false;
+      });
 
       this.notify({ type: 'starting', description: 'Stack starting' });
-
-      // this.WS = new ReconnectingWebSocket(this.wsurl);
 
       this.WS = new WebSocket(this.wsurl);
       this.interval = null;
@@ -1936,7 +2058,7 @@
         this.login();
       };
       this.WS.onclose = (ev) => {
-        console.log('ws connect close.', ev);
+        console.log('ws connect close.', JSON.stringify(ev));
         this.WSStatus = false;
         this.regStatus = false;
         this.callStatus = false;
@@ -1945,6 +2067,11 @@
           this.interval = null;
         }
         this.notify({ type: RTCStreamEventType.ON_DISCONNECT });
+
+        //重新注册
+        if (this.client.isLogin() && !this.rtcStream.loginFail) {
+          this.client.initSoftPhone();
+        }
       };
 
       window.onbeforeunload = () => {
@@ -1976,7 +2103,7 @@
               clearInterval(this.interval);
               this.interval = null;
             }
-            this.interval = setInterval(() => this.heart(), 30000);
+            this.interval = setInterval(() => this.heart(), this.heartTimeout);
             break;
           // case RTCStreamEventType.LOGOUT:
           //     // this.regStatus = false;
@@ -1997,6 +2124,7 @@
             break;
           case RTCStreamEventType.ON_RING:
             this.ringbacktone.currentTime = 0;
+            this.ringbacktone.muted = true;
             this.ringbacktone.play();
             this.notify({ type: recvmsg.type });
             break;
@@ -2040,12 +2168,13 @@
               var isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1; //android终端
               var isiOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); //ios终
               if (isAndroid) {
-                ringtone.play();
+                this.ringtone.muted = true;
+                this.ringtone.play();
               } else if (isiOS) {
                 this.ringtone.muted = true;
                 this.ringtone.play();
               } else if (!isAndroid && !isiOS) {
-                this.ringtone.muted = false;
+                this.ringtone.muted = true;
                 this.ringtone.play();
               }
             } catch (error) {
@@ -2058,6 +2187,7 @@
       };
 
       this.WS.onerror = (ev) => {
+        this.rtcStream.loginFail = true;
         console.error('WS.onerror', ev);
       };
     }
@@ -2130,6 +2260,7 @@
         return false;
       }
       var dtmfAudio = new Audio('/static/sounds/dtmf.wav');
+      dtmfAudio.muted = true;
       dtmfAudio.play();
       this.sendTo({ type: RTCStreamEventType.DTMF, content: value });
       return true;
@@ -2163,7 +2294,6 @@
     }
 
     call(called, localElement, remoteElement, isVideo, isHalf) {
-      console.log('call--------');
       try {
         if (!this.regStatus) {
           console.log('user is not login');
@@ -2176,7 +2306,6 @@
         }
 
         if (this.callStatus) {
-          console.log('has in calling');
           this.notify({
             type: RTCStreamEventType.MAKE_CALL,
             result: false,
@@ -2244,7 +2373,7 @@
     }
 
     answer(localElement, remoteElement) {
-      console.log('0-----answer-----', localElement, remoteElement);
+      console.log('0-----answer-----', localElement?.id, remoteElement?.id);
       this.localElement = localElement;
       this.remoteElement = remoteElement;
 
@@ -2391,7 +2520,6 @@
       if (this.isVideo && this.localElement != null) {
         this.localElement.srcObject = stream;
         this.localElement.muted = false;
-        // this.localElement.autoplay = true;
         this.localElement.play();
       }
 
@@ -2401,6 +2529,7 @@
     }
 
     getMediaFail(error) {
+      console.log('getMediaFail error', error);
       if (this.callDirection === CALL_DIRECTION.OUT) {
         this.notify({
           type: RTCStreamEventType.MAKE_CALL,
@@ -2446,6 +2575,12 @@
         });
       }
     }
+
+    muted(isMuted = true) {
+      this.localStream.getTracks().forEach((track) => {
+        track.enabled = !isMuted;
+      });
+    }
   };
 
   /**
@@ -2485,7 +2620,7 @@
             },
           })
           .then((res) => {
-            console.log('recv receive response', res.data);
+            console.log('recv receive response', JSON.stringify(res.data));
             if (res.data.result !== 'succ') {
               if (self.callback) {
                 self.callback(
@@ -2615,16 +2750,42 @@
     }
 
     /**
-     * 获取用户空闲的主叫号码
+     * 获取可用的主叫号码
      * @param {Boolean} isMicro 是否为手咪
      * @returns
      */
-    getIdleTel(isMicro = false) {
+    getAvailableTel(isMeeting = false, isMicro = false) {
       if (!this.client.operatorInfo) {
         console.warn('用户信息为空');
         return null;
       }
       let { mainTel, viceTel, mainTelType, viceTelType } = this.client.operatorInfo;
+
+      if (isMeeting) {
+        let inStatus = [
+          DeviceState.TALK,
+          DeviceState.HOLD,
+          DeviceState.SINGLE_TALK,
+          DeviceState.allowspeak,
+          DeviceState.BAN_SPEAK,
+        ];
+        if (
+          mainTel &&
+          mainTelType !== HandType.HAND_MICROPHONE &&
+          this.client.telStatus[mainTel] &&
+          inStatus.includes(this.client.telStatus[mainTel])
+        ) {
+          return mainTel;
+        }
+        if (
+          viceTel &&
+          viceTelType !== HandType.HAND_MICROPHONE &&
+          this.client.telStatus[viceTel] &&
+          inStatus.includes(this.client.telStatus[viceTel])
+        ) {
+          return viceTel;
+        }
+      }
 
       if (mainTel && (!this.client.telStatus[mainTel] || this.client.telStatus[mainTel] === DeviceState.IDLE)) {
         if (isMicro) {
@@ -2640,6 +2801,7 @@
           return viceTel;
         }
       }
+      console.log('getAvailableTel telStatus', this.client.telStatus);
       return null;
     }
 
@@ -2674,7 +2836,7 @@
      */
     makeCall({ calledDevice, callType = CallType.AUDIO, duplexMode = DuplexMode.FULL, userID }) {
       if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('被叫号码不能为空'));
-      let callingDevice = this.getIdleTel(duplexMode === DuplexMode.HALF);
+      let callingDevice = this.getAvailableTel(false, duplexMode === DuplexMode.HALF);
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.makeCall({
         callingDevice,
@@ -2712,8 +2874,8 @@
     groupCall({ groupID, meetID, callMode = CallMode.PARALLEL, meetMode = MeetMode.AUDIO }) {
       if (Util.isEmpty(groupID)) return Promise.reject(R.err('组ID不能为空'));
       let callingDevice = meetID
-        ? this.client.conferenceRoom.meetingCalling.get(meetID) || this.getIdleTel()
-        : this.getIdleTel();
+        ? this.client.conferenceRoom.meetingCalling.get(meetID) || this.getAvailableTel(true)
+        : this.getAvailableTel(true);
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       if (meetID) {
         this.client.conferenceRoom.meetingCalling.set(meetID, callingDevice);
@@ -2822,10 +2984,10 @@
      * @returns
      */
     selectCall({ called, meetID, callMode = CallMode.PARALLEL, meetMode = MeetMode.AUDIO }) {
-      // if (Util.isEmpty(called)) return Promise.reject(R.err('被叫用户不能为空'));
+      if (Util.isEmpty(called)) return Promise.reject(R.err('被叫用户不能为空'));
       let callingDevice = meetID
-        ? this.client.conferenceRoom.meetingCalling.get(meetID) || this.getIdleTel()
-        : this.getIdleTel();
+        ? this.client.conferenceRoom.meetingCalling.get(meetID) || this.getAvailableTel(true)
+        : this.getAvailableTel(true);
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       if (!called) {
         called = [{ calledDevice: callingDevice, userID: this.client.operatorInfo.operatorID }];
@@ -2900,7 +3062,7 @@
      */
     rollCall({ called, callMode = CallMode.PARALLEL, fileName }) {
       if (Util.isEmpty(called)) return Promise.reject(R.err('被叫用户不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.rollCall({
         callingDevice,
@@ -2928,7 +3090,7 @@
      */
     pollCall({ called, callType = CallType.AUDIO }) {
       if (Util.isEmpty(called)) return Promise.reject(R.err('被叫用户不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.pollCall({
         callingDevice,
@@ -2956,8 +3118,8 @@
      */
     groupAnswerCall(meetID, isSpeak = YesOrNo.NO) {
       let callingDevice = meetID
-        ? this.client.conferenceRoom.meetingCalling.get(meetID) || this.getIdleTel()
-        : this.getIdleTel();
+        ? this.client.conferenceRoom.meetingCalling.get(meetID) || this.getAvailableTel(true)
+        : this.getAvailableTel(true);
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       if (meetID) {
         this.client.conferenceRoom.meetingCalling.set(meetID, callingDevice);
@@ -3014,7 +3176,7 @@
      */
     broadcastCall({ called, callMode = BroadcastMode.MANUAL, callLoop = 0, fileName, callSessionID }) {
       if (Util.isEmpty(called)) return Promise.reject(R.err('被叫用户不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       if (callMode === BroadcastMode.FILE && !fileName) {
         return Promise.reject(R.err('文件广播文件名不能为空'));
@@ -3062,10 +3224,9 @@
      * @param {String} meetMode 会议模式
      * @returns
      */
-    joinMeetCall({ calledDevice, userID, meetID, meetMode = MeetMode.AUDIO }) {
-      // if (Util.isEmpty(calledDevice))
-      //   return Promise.reject(R.err('被叫号码不能为空'));
-      let callingDevice = this.getIdleTel();
+    joinMeetCall({ callingDevice, calledDevice, userID, meetID, meetMode = MeetMode.AUDIO }) {
+      if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('被叫号码不能为空'));
+      callingDevice ??= this.getAvailableTel(true);
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return new Promise(async (resolve, reject) => {
         //会议ID不存在
@@ -3120,7 +3281,7 @@
      */
     answerCall({ calledDevice, userID }) {
       if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('被应答的号码不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.answerCall({
         callingDevice,
@@ -3152,7 +3313,7 @@
      */
     unholdCall({ calledDevice, userID, callType = CallType.AUDIO }) {
       if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('解除保持用户号码不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.unholdCall({
         callingDevice,
@@ -3206,7 +3367,7 @@
      */
     forceInsertCall({ calledDevice, userID }) {
       if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('被强插用户号码不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.forceInsertCall({
         callingDevice,
@@ -3223,7 +3384,7 @@
      */
     forceReleaseCall({ calledDevice, userID }) {
       if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('被强拆用户号码不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.forceReleaseCall({
         callingDevice,
@@ -3240,7 +3401,7 @@
      */
     forceClearCall({ calledDevice, userID }) {
       if (Util.isEmpty(calledDevice)) return Promise.reject(R.err('被强断用户号码不能为空'));
-      let callingDevice = this.getIdleTel();
+      let callingDevice = this.getAvailableTel();
       if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
       return Api.CallSessions.forceClearCall({
         callingDevice,
@@ -3384,7 +3545,7 @@
       }
       callingDevice ??= this.meetingCalling.get(meetID);
       if (!callingDevice) {
-        callingDevice = this.client.callSession.getIdleTel();
+        callingDevice = this.client.callSession.getAvailableTel(true);
         if (!callingDevice) return Promise.reject(R.err('未正确配置可用的主叫话机，请检查。', 6001));
         this.meetingCalling.set(meetID, callingDevice);
       }
@@ -3437,7 +3598,7 @@
         return Promise.reject(R.err('不支持的混码类型'));
       }
       if (sourceInfo.length != mixType) {
-        console.log('混码源和类型不匹配 ', mixType, sourceInfo);
+        console.log('混码源和类型不匹配 ', mixType, JSON.stringify(sourceInfo));
         return Promise.reject(R.err('混码源和类型不匹配'));
       }
       return Api.ConferenceRoom.startMeetVideoMix({
@@ -3541,13 +3702,210 @@
       if (Util.isEmpty(videoID)) return Promise.reject(R.err('请选择监控'));
       if (Util.isEmpty(command)) return Promise.reject(R.err('云台控制命令不能为空'));
 
-      console.log('111');
       if (param < 1 || param > 255) return Promise.reject(R.err('云台速度值范围0-255'));
       return Api.VideoSessions.ptzControl({
         videoID,
         command,
         param: param + '',
       });
+    }
+  }
+
+  /**
+   * 短信控制类
+   */
+  class SmsSessions {
+    constructor(client) {
+      this.client = client;
+    }
+
+    /**
+     * 获取短信列表
+     * @returns
+     */
+    list(data) {
+      return Api.SmsSessions.list(data);
+    }
+
+    /**
+     * 获取短信详细信息
+     * @returns
+     */
+    get(data = {}) {
+      if (Util.isEmpty(data.smsContacts) && Util.isEmpty(data.smsGroupID))
+        return Promise.reject(R.err('短信号码和群聊ID必选其一'));
+
+      return Api.SmsSessions.get(data);
+    }
+
+    /**
+     * 获取定时短信列表
+     * @returns
+     */
+    crontab(data) {
+      return Api.SmsSessions.crontab(data);
+    }
+
+    /**
+     * 根据关键字获取短信列表
+     * @returns
+     */
+    match(data) {
+      return Api.SmsSessions.match(data);
+    }
+
+    /**
+     * 短信发送
+     * @returns
+     */
+    send(data) {
+      if (Util.isEmpty(data.smsFormat) || Util.isEmpty(data.smsType) || Util.isEmpty(data.smsContacts))
+        return Promise.reject(R.err('参数缺失'));
+      if (data.smsFormat === 'sms') {
+        if (Util.isEmpty(data.smsContent)) {
+          return Promise.reject(R.err('短信内容不能为空'));
+        }
+      } else if (Util.isEmpty(data.smsFileName)) {
+        return Promise.reject(R.err('文件名不能为空'));
+      }
+      return Api.SmsSessions.send(data);
+    }
+    /**
+     * 短信删除
+     * @returns
+     */
+    delete(data) {
+      if (Util.isEmpty(data.smsID) && Util.isEmpty(data.smsContacts) && Util.isEmpty(data.smsGroupID))
+        return Promise.reject(R.err('短信ID、短信号码和群聊ID必选其一'));
+      return Api.SmsSessions.delete(data);
+    }
+    /**
+     * 短信已读
+     * @returns
+     */
+    read(data) {
+      if (Util.isEmpty(data.smsID) && Util.isEmpty(data.smsContacts) && Util.isEmpty(data.smsGroupID))
+        return Promise.reject(R.err('短信ID、短信号码和群聊ID必选其一'));
+      return Api.SmsSessions.read(data);
+    }
+    /**
+     * 群聊设置
+     * @returns
+     */
+    setGroup(data) {
+      if (Util.isEmpty(data.event) && Util.isEmpty(data.smsGroupName)) return Promise.reject(R.err('参数缺失'));
+      return Api.SmsSessions.setGroup(data);
+    }
+    /**
+     * 群聊查询
+     * @returns
+     */
+    getGroup(smsGroupID) {
+      if (Util.isEmpty(data.smsGroupID)) return Promise.reject(R.err('群聊ID不能为空'));
+      return Api.SmsSessions.getGroup(smsGroupID);
+    }
+  }
+  /**
+   * 传真控制类
+   */
+  class FaxSessions {
+    constructor(client) {
+      this.client = client;
+    }
+
+    /**
+     * 获取传真列表
+     * @returns
+     */
+    list(data) {
+      return Api.FaxSessions.list(data);
+    }
+
+    /**
+     * 获取传真详细信息
+     * @returns
+     */
+    get(data = {}) {
+      if (Util.isEmpty(data.faxContacts) && Util.isEmpty(data.faxGroupID))
+        return Promise.reject(R.err('传真号码和群发组ID必选其一'));
+
+      return Api.FaxSessions.get(data);
+    }
+
+    /**
+     * 获取定时传真列表
+     * @returns
+     */
+    crontab(data) {
+      return Api.FaxSessions.crontab(data);
+    }
+
+    /**
+     * 根据关键字获取传真列表
+     * @returns
+     */
+    match(data) {
+      return Api.FaxSessions.match(data);
+    }
+
+    /**
+     * 传真发送
+     * @returns
+     */
+    send(data) {
+      if (Util.isEmpty(data.faxContent)) return Promise.reject(R.err('文件名不能为空'));
+      if (Util.isEmpty(data.faxContacts)) return Promise.reject(R.err('接收人不能为空'));
+      if (Util.isEmpty(data.faxRealFileName)) data.faxRealFileName = data.faxContent;
+      return Api.FaxSessions.send(data);
+    }
+    /**
+     * 传真删除
+     * @returns
+     */
+    delete(data) {
+      if (Util.isEmpty(data.faxID) && Util.isEmpty(data.faxContacts) && Util.isEmpty(data.faxGroupID))
+        return Promise.reject(R.err('传真ID、传真号码和群发组ID必选其一'));
+      return Api.FaxSessions.delete(data);
+    }
+    /**
+     * 传真已读
+     * @returns
+     */
+    read(data) {
+      if (Util.isEmpty(data.faxID) && Util.isEmpty(data.faxContacts) && Util.isEmpty(data.faxGroupID))
+        return Promise.reject(R.err('传真ID、传真号码和群发组ID必选其一'));
+      return Api.FaxSessions.read(data);
+    }
+  }
+
+  /**
+   * 定位
+   */
+  class Location {
+    constructor(client) {
+      this.client = client;
+    }
+
+    /**
+     * 位置订阅
+     */
+    subscribe(data) {
+      return Api.Location.subscribe(data);
+    }
+    /**
+     * 获取定位位置信息(最近一次的更新)
+     */
+    last(data) {
+      if (Util.isEmpty(data.deviceCode)) return Promise.reject(R.err('定位号码不能为空'));
+      return Api.Location.last(data);
+    }
+    /**
+     * 获取历史定位位置信息
+     */
+    history(data) {
+      if (Util.isEmpty(data.deviceCode)) return Promise.reject(R.err('定位号码不能为空'));
+      if (Util.isEmpty(data.start) || Util.isEmpty(data.end)) return Promise.reject(R.err('起始和结束时间不能为空'));
+      return Api.Location.history(data);
     }
   }
 
@@ -3590,7 +3948,54 @@
     deleteVoiceFile(fileid) {
       return Api.File.VoiceFile.edit(fileid);
     }
+
+    getSmsFileUploadUrl() {
+      return `${http.defaults.baseURL}/fileflow/smsfile/upload`;
+    }
+    getSmsFileUrl(filename = '') {
+      return `${http.defaults.baseURL}/fileflow/smsfile/download/${filename}`;
+    }
+
+    /**
+     * 短信文件上传
+     * @param {Object} options: {file:文件}
+     */
+    uploadSmsFile(options) {
+      return Api.File.SmsFile.upload(options);
+    }
+
+    /**
+     * 短信文件下载
+     * @param {String} filename
+     */
+    downloadSmsFile(filename) {
+      return Api.File.SmsFile.download(filename);
+    }
+
+    getFaxFileUploadUrl() {
+      return `${http.defaults.baseURL}/fileflow/faxfile/upload`;
+    }
+    getFaxFileUrl(filename = '') {
+      return `${http.defaults.baseURL}/fileflow/faxfile/download/${filename}`;
+    }
+
+    /**
+     * 传真文件上传
+     * @param {Object} options: {file:文件}
+     */
+    uploadFaxFile(options) {
+      return Api.File.FaxFile.upload(options);
+    }
+
+    /**
+     * 传真文件下载
+     * @param {String} filename
+     */
+    downloadFaxFile(filename) {
+      return Api.File.FaxFile.download(filename);
+    }
   }
+
   /**
    * 数据存储类
    */
@@ -3718,7 +4123,7 @@
           await Api.User.refreshToken()
             .then((res) => {})
             .catch((err) => {
-              console.warn('keepalive erroo', err);
+              console.warn('keepalive err', JSON.stringify(err));
             });
         }
       }, 5 * 60 * 1000);
@@ -3818,6 +4223,31 @@
     stopVideoDispense: (data) => http.post('/video_sessions/video_mix/stopvideodispense', data),
     ptzControl: (data) => http.post('/video_sessions/video_monitor/ptzcontrol', data),
   };
+  Api.FaxSessions = {
+    list: (data) => http.post('/fax_sessions/list', data),
+    match: (data) => http.post('/fax_sessions/match', data),
+    crontab: (data) => http.post('/fax_sessions/crontab/list', data),
+    get: (data) => http.post('/fax_sessions/get', data),
+    send: (data) => http.post('/fax_sessions/send', data),
+    delete: (data) => http.post('/fax_sessions/delete', data),
+    read: (data) => http.post('/fax_sessions/read', data),
+  };
+  Api.SmsSessions = {
+    list: (data) => http.post('/sms_sessions/list', data),
+    match: (data) => http.post('/sms_sessions/match', data),
+    crontab: (data) => http.post('/sms_sessions/crontab/list', data),
+    get: (data) => http.post('/sms_sessions/get', data),
+    send: (data) => http.post('/sms_sessions/send', data),
+    delete: (data) => http.post('/sms_sessions/delete', data),
+    read: (data) => http.post('/sms_sessions/read', data),
+    setGroup: (data) => http.post('/sms_sessions/group/set', data),
+    getGroup: (smsGroupID) => http.post('/sms_sessions/group/get', { smsGroupID }),
+  };
+  Api.Location = {
+    subscribe: (data) => http.post('/location/subscribe', data),
+    last: (data) => http.post('/location/points/last', data),
+    history: (data) => http.post('/location/points/history', data),
+  };
   Api.Data.Group = {
     listSub: (data) => http.post('/dataflow/group/listsub', data),
     add: (data) => http.post('/dataflow/group/add', data),
@@ -3866,32 +4296,44 @@
     edit: (data) => http.post('/dataflow/blacklist/update', data),
     delete: (ID) => http.post('/dataflow/blacklist/delete', { ID }),
   };
+
+  const uploadFile = (api, options) => {
+    return new Promise((resolve, reject) => {
+      let formData = new FormData();
+      formData.append('file', options.file);
+      http
+        .post(api, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          //上传进度
+          onUploadProgress: (progressEvent) => {
+            let num = ((progressEvent.loaded / progressEvent.total) * 100) | 0; //百分比
+            options.onProgress && options.onProgress({ percent: num }); //进度条
+          },
+        })
+        .then((res) => {
+          options.onSuccess && options.onSuccess(); //上传成功(打钩的小图标)
+          resolve(res);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+
   Api.File.VoiceFile = {
     list: (data) => http.post('/fileflow/voicefile/list', data),
-    upload: (options) => {
-      return new Promise((resolve, reject) => {
-        let formData = new FormData();
-        formData.append('file', options.file);
-        http
-          .post('/fileflow/voicefile/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            //上传进度
-            onUploadProgress: (progressEvent) => {
-              let num = ((progressEvent.loaded / progressEvent.total) * 100) | 0; //百分比
-              options.onProgress && options.onProgress({ percent: num }); //进度条
-            },
-          })
-          .then((res) => {
-            options.onSuccess && options.onSuccess(); //上传成功(打钩的小图标)
-            resolve(res);
-          })
-          .catch((err) => {
-            reject(err);
-          });
-      });
-    },
+    upload: (options) => uploadFile('/fileflow/voicefile/upload', options),
     edit: (data) => http.post('/fileflow/voicefile/update', data),
     delete: (fileid) => http.post('/fileflow/voicefile/delete', { fileid }),
   };
+  Api.File.SmsFile = {
+    upload: (options) => uploadFile('/fileflow/smsfile/upload', options),
+    download: (filename) => http.get(`/fileflow/smsfile/download/${filename}`),
+  };
+  Api.File.FaxFile = {
+    upload: (options) => uploadFile('/fileflow/faxfile/upload', options),
+    download: (filename) => http.get(`/fileflow/faxfile/download/${filename}`),
+  };
+
   return DispRTC;
 });
