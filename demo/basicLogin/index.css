@@ -10,7 +10,7 @@
 }
 
 
-#join-form {
+.container {
   margin-top: 10px;
 }
 
@@ -24,10 +24,10 @@
   margin-bottom: 2px;
 }
 
-input {
+/* input {
   width: 100%;
   margin-bottom: 2px;
-}
+} */
 
 .player {
   width: 480px;
@@ -47,4 +47,10 @@ input {
     width: 320px;
     height: 240px;
   }
+}
+
+
+/* 新增 */
+.button-group{
+  margin-top: 2%;
 }
