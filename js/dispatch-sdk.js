@@ -1461,6 +1461,11 @@
     IN: 0,
     OUT: 1,
   };
+  const CALL_TYPE = {
+    AUDIO: 'call-audio',
+    VIDEO: 'call-audiovideo',
+    HALF_AUDIO: 'call-halfaudio',
+  };
 
   /**
    * 软电话
@@ -1846,6 +1851,14 @@
         })
         .catch(function (err) {});
     }
+
+    /**
+     * 呼入接听
+     * @param videoRemote
+     * @param videoLocal
+     * @param mudle
+     * @returns {boolean}
+     */
     sipAnswer(videoRemote, videoLocal, mudle) {
       if (this.webrtcStackNode == null) {
         return false;
