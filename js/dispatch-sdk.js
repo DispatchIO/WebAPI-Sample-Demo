@@ -1759,6 +1759,12 @@
       this.webrtcStackNode.exit();
     }
 
+    /**
+     * 呼出
+     * @param callType
+     * @param phoneNumber
+     * @returns {boolean}
+     */
     sipCall(callType, phoneNumber) {
       var hasVideo = false;
       var hasHalf = false;
@@ -2779,7 +2785,8 @@
           DeviceState.TALK,
           DeviceState.HOLD,
           DeviceState.SINGLE_TALK,
-          DeviceState.allowspeak,
+          // DeviceState.allowspeak, 无该变量,下面修改
+          DeviceState.ALLOW_SPEAK,
           DeviceState.BAN_SPEAK,
         ];
         if (
