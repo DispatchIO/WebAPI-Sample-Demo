@@ -45,7 +45,7 @@
 Create the banner at the top of the page.
 -->
     <div class="container-fluid banner">
-        <p class="banner-text">加入会议</p>
+        <p class="banner-text">会议锁定</p>
         <a style="color: rgb(255, 255, 255);fill: rgb(255, 255, 255);fill-rule: evenodd; position: absolute; right: 10px; top: 4px;"
             class="Header-link " href="https://github.com/DispatchIO/WebAPI-Sample-Demo/tree/master">
             <svg class="octicon octicon-mark-github v-align-middle" height="32" viewBox="0 0 16 16" version="1.1"
@@ -60,13 +60,14 @@ Create the banner at the top of the page.
 
     <div class="container">
         <div class="panel panel-default">
-            <h3 class="panel-heading">加入会议</h3>
+            <h3 class="panel-heading">会议锁定</h3>
 
             <div class="panel-body">
 
                 <div class="input-group">
                     <button type="button" id="call_answer" class="btn btn-default" disabled>接听</button>
                     <button type="button" id="call_hangup" class="btn btn-default">挂断</button>
+                    <button type="button" id="meet_lock" class="btn btn-default">会议锁定</button>
 
                     <button type="button" id="user_info_btn" class="btn btn-default" data-toggle="modal"
                         data-target="#user_info">查看手柄号注册信息
@@ -204,7 +205,10 @@ Create the banner at the top of the page.
         })
     })
 
-
+    // 会议锁定
+    $("#meet_lock").click(function () {
+        cc.conferenceRoom.lockMeet({"meetID":$("#meet_id").val(),"isLocked":"yes"})
+    })
     function add_dom(num){
         return '<div class="col-sm-3 col-md-3" id="'+num+'"><div class="thumbnail"><img src="'+cc.server+'/assets/avatar.e759254d.png" title="" alt=""><div class="caption"><h3><center>'+num+'</center></h3></div></div></div>';
     }

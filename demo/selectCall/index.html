@@ -45,7 +45,7 @@
 Create the banner at the top of the page.
 -->
     <div class="container-fluid banner">
-        <p class="banner-text">加入会议</p>
+        <p class="banner-text">选呼</p>
         <a style="color: rgb(255, 255, 255);fill: rgb(255, 255, 255);fill-rule: evenodd; position: absolute; right: 10px; top: 4px;"
             class="Header-link " href="https://github.com/DispatchIO/WebAPI-Sample-Demo/tree/master">
             <svg class="octicon octicon-mark-github v-align-middle" height="32" viewBox="0 0 16 16" version="1.1"
@@ -60,7 +60,7 @@ Create the banner at the top of the page.
 
     <div class="container">
         <div class="panel panel-default">
-            <h3 class="panel-heading">加入会议</h3>
+            <h3 class="panel-heading">选呼</h3>
 
             <div class="panel-body">
 
@@ -77,19 +77,29 @@ Create the banner at the top of the page.
                     <label class="input-group-addon">会议ID</label>
                     <input type="text" class="form-control" id="meet_id">
                 </div>
+
+
                 <div class="input-group">
                     <label class="input-group-addon">用户号码</label>
-                    <input type="text" class="form-control" id="user_phone">
+                    <input type="text" class="form-control" id="user_phone" placeholder="请输入,进行分割">
                     <span class="input-group-btn">
                         <button class="btn btn-default" type="button" id="join_meet">加入会议</button>
                     </span>
+                </div>
+                <div class="input-group">
+                    <label class="input-group-addon">呼叫类型</label>
+
+                    <select class="form-control" id="CallType">
+                        <option value="parallel">同时呼叫</option>
+                        <option value="serial">顺序呼叫</option>
+                    </select>
                 </div>
                 <hr>
 
                 <div class="row">
 
                 </div>
-                
+
 
                 <!-- <textarea class="form-control" id="meet_info" width="100%" rows="10" readonly></textarea> -->
             </div>
@@ -168,7 +178,7 @@ Create the banner at the top of the page.
 
     // 会议成员删除事件
     cc.on("MeetMemberEvent_Del", (msg) => {
-        $("#"+msg.data.activeDevice).remove();
+        $("#" + msg.data.activeDevice).remove();
     });
 
     rtcStream.on("on_new_call", (msg) => {
@@ -197,16 +207,22 @@ Create the banner at the top of the page.
     })
     // 加入会议
     $("#join_meet").click(function (msg) {
-        let param = { "callingDevice": mainTel, "calledDevice": $("#user_phone").val(), "meetID": param_meetId, "userID": null };
 
-        cc.callSession.joinMeetCall(param).then(function (msg) {
+        let called = new Array();
+        for (const i of $("#user_phone").val().split(",")) {
+            called.push({ "calledDevice": i })
+        }
+
+        let param = { "called": called, "callingDevice": mainTel, "calledDevice": $("#user_phone").val(), "meetID": param_meetId, "callMode": $("#CallType").val() };
+
+        cc.callSession.selectCall(param).then(function (msg) {
             console.log(msg)
         })
     })
 
 
-    function add_dom(num){
-        return '<div class="col-sm-3 col-md-3" id="'+num+'"><div class="thumbnail"><img src="'+cc.server+'/assets/avatar.e759254d.png" title="" alt=""><div class="caption"><h3><center>'+num+'</center></h3></div></div></div>';
+    function add_dom(num) {
+        return '<div class="col-sm-3 col-md-3" id="' + num + '"><div class="thumbnail"><img src="' + cc.server + '/assets/avatar.e759254d.png" title="" alt=""><div class="caption"><h3><center>' + num + '</center></h3></div></div></div>';
     }
 
     function getUrlParam(name) {
