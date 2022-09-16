@@ -55,6 +55,11 @@ Create the banner at the top of the page.
 
 <div class="container">
 
+<!--    <div id="remote_video" style="width: 100px;height: 100px">-->
+<!--    <div id="local_video" style="width: 100px;height: 100px">-->
+
+<!--    </div>-->
+
     <!--电话呼入弹出-->
     <div class="panel panel-default" style="margin-top: 2%">
         <!-- Default panel contents -->
@@ -76,22 +81,19 @@ Create the banner at the top of the page.
     const cc = DispRTC.createClient({"server": "https://192.168.1.200", "token": token});
 
     const rtcStream = new DispRTC.RTCStream({
-        "client": cc,
+        "client": cc, // 创建的Client对象
         "phone": "801",
         "password": "1",
         "wsServer": "wss://192.168.1.200"
     });
     // 监听呼入状态
     rtcStream.on("on_new_call", (msg) => {
-
         $(".list-group-item").text("来自" + msg.from + "的语音呼入，呼叫到" + msg.to)
-
     });
 
-    // 挂断状态
+    // 监听挂断状态
     rtcStream.on("on_hangup", (msg) => {
         $(".list-group-item").text(msg.reason)
-
     });
 
     rtcStream.init()
