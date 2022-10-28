@@ -74,18 +74,19 @@ Create the banner at the top of the page.
 </div>
 
 </body>
-<script>
-    sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"))
-    // 设置token
-    let token = JSON.parse($.cookie("DispRTC-token")).content;
-    const cc = DispRTC.createClient({"server": "https://192.168.1.200", "token": token});
+<script src="/assets/config.js"></script>
 
-    const rtcStream = new DispRTC.RTCStream({
-        "client": cc, // 创建的Client对象
-        "phone": "801",
-        "password": "1",
-        "wsServer": "wss://192.168.1.200"
-    });
+<script>
+
+    // const rtcStream = new DispRTC.RTCStream({
+    //     "client": cc, // 创建的Client对象
+    //     "phone": "801",
+    //     "password": "1",
+    //     "wsServer": "wss://192.168.1.200"
+    // });
+
+    // 注册手柄号
+    rtcStream.setRegisterProfile("801","1");
     // 监听呼入状态
     rtcStream.on("on_new_call", (msg) => {
         $(".list-group-item").text("来自" + msg.from + "的语音呼入，呼叫到" + msg.to)

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- socket.io依赖 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+
+
+</head>
+
+<body>
+
+</body>
+<script>
+    let token = "fe3a38ab4d65f745752320faf6a50226fd40881d";
+    let socket = io.connect("https://192.168.1.200", {
+        path: "/socket.io/", 
+        transports: ['websocket'],
+        query: {
+            token: token
+        }
+    }); 
+    socket.on("connect",function(){
+        console.log('socket connect状态', socket.connected ? '成功' : '失败');
+    });
+    socket.on(token,function(data){
+        if(data.eventType == "CallConnStatusEvent"){
+            
+            console.log(data);  
+        }
+    });
+</script>
+
+</html>

@@ -96,12 +96,9 @@ Create the banner at the top of the page.
                 </div>
                 <hr>
 
-                <div class="row">
-
-                </div>
+                <div class="row"></div>
 
 
-                <!-- <textarea class="form-control" id="meet_info" width="100%" rows="10" readonly></textarea> -->
             </div>
 
 
@@ -136,18 +133,10 @@ Create the banner at the top of the page.
     </div>
 
 </body>
+<script src="/assets/config.js"></script>
 
 <script>
-    sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"));
-    // 手柄号
-    let mainTel;
-    // 设置token
-    let token = JSON.parse($.cookie("DispRTC-token")).content;
-    const cc = DispRTC.createClient({ "server": "https://192.168.1.200", "token": token });
-    const rtcStream = new DispRTC.RTCStream({
-        "client": cc, // 创建的Client对象
-        "wsServer": "wss://192.168.1.200"
-    });
+ 
     cc.getOperatorInfo().then(function (msg) {
         $("#left_phone").text(msg.data.mainTel);
         mainTel = msg.data.mainTel;

@@ -71,8 +71,7 @@ Create the banner at the top of the page.
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="meet_list">
-                </tbody>
+                <tbody id="meet_list"></tbody>
 
 
             </table>
@@ -80,16 +79,11 @@ Create the banner at the top of the page.
     </div>
 
 </body>
+<!-- 配置文件 -->
+<script src="/assets/config.js"></script>
 
 <script>
-    sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"))
-    // 设置token
-    let token = JSON.parse($.cookie("DispRTC-token")).content;
-    const cc = DispRTC.createClient({ "server": "https://192.168.1.200", "token": token });
-    const rtcStream = new DispRTC.RTCStream({
-        "client": cc, // 创建的Client对象
-        "wsServer": "wss://192.168.1.200"
-    });
+
     cc.getOperatorInfo().then(function (msg) {
         $("#left_phone").text(msg.data.mainTel)
         $("#phones").append('<option>' + msg.data.mainTel + '<option>')

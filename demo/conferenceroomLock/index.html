@@ -127,18 +127,10 @@ Create the banner at the top of the page.
     </div>
 
 </body>
+<script src="/assets/config.js"></script>
 
 <script>
-    sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"));
-    // 手柄号
-    let mainTel;
-    // 设置token
-    let token = JSON.parse($.cookie("DispRTC-token")).content;
-    const cc = DispRTC.createClient({ "server": "https://192.168.1.200", "token": token });
-    const rtcStream = new DispRTC.RTCStream({
-        "client": cc, // 创建的Client对象
-        "wsServer": "wss://192.168.1.200"
-    });
+
     cc.getOperatorInfo().then(function (msg) {
         $("#left_phone").text(msg.data.mainTel);
         mainTel = msg.data.mainTel;
@@ -207,7 +199,13 @@ Create the banner at the top of the page.
 
     // 会议锁定
     $("#meet_lock").click(function () {
-        cc.conferenceRoom.lockMeet({"meetID":$("#meet_id").val(),"isLocked":"yes"})
+        if(this.text()=="会议锁定"){
+            cc.conferenceRoom.lockMeet({"meetID":$("#meet_id").val(),"isLocked":"yes"})
+            this.text("解除锁定");
+        }else{
+            cc.conferenceRoom.lockMeet({"meetID":$("#meet_id").val(),"isLocked":"no"})
+            this.text("会议锁定");
+        }
     })
     function add_dom(num){
         return '<div class="col-sm-3 col-md-3" id="'+num+'"><div class="thumbnail"><img src="'+cc.server+'/assets/avatar.e759254d.png" title="" alt=""><div class="caption"><h3><center>'+num+'</center></h3></div></div></div>';

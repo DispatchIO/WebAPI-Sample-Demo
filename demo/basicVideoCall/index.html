@@ -81,8 +81,42 @@ Create the banner at the top of the page.
         </div>
 
         <div class="form-group">
+            <label for="content" class="col-sm-2 control-label">被叫号码（参数必填）</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" id="call_phone" placeholder="被叫号码">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-2 control-label">呼叫类型（参数可填）</label>
+            <div class="col-sm-10">
+                <select id="callType" class="form-control">
+                    <option value="video">视频呼叫</option>
+                    <option value="audio">语音呼叫</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-2 control-label">呼叫类型（参数可填）</label>
+            <div class="col-sm-10">
+                <select id="duplexMode" class="form-control">
+                    <option value="full">全双工</option>
+                    <option value="half">半双工</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="content" class="col-sm-2 control-label">UserId（参数可填）</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" id="userID" placeholder="userID">
+            </div>
+        </div>
+
+        <div class="form-group">
             <div class="col-sm-offset-2 col-sm-10">
-                <button type="button" id="call_btn" class="btn btn-default">语音呼叫</button>
+                <button type="button" id="call_btn" class="btn btn-default">呼叫</button>
                 <button type="button" id="call_answer" class="btn btn-default" disabled>接听</button>
 <!--                <button type="button" id="call_hangup" class="btn btn-default">挂断</button>-->
 
@@ -131,16 +165,10 @@ Create the banner at the top of the page.
 </div>
 
 </body>
+<script src="/assets/config.js"></script>
 
 <script>
-    sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"))
-    // 设置token
-    let token = JSON.parse($.cookie("DispRTC-token")).content;
-    const cc = DispRTC.createClient({"server": "https://192.168.1.200", "token": token});
-    const rtcStream = new DispRTC.RTCStream({
-        "client": cc, // 创建的Client对象
-        "wsServer": "wss://192.168.1.200"
-    });
+
     cc.getOperatorInfo().then(function (msg) {
         $("#left_phone").text(msg.data.mainTel)
         $("#phones").append('<option>' + msg.data.mainTel + '<option>')
@@ -181,7 +209,8 @@ Create the banner at the top of the page.
 
             // let call_phone = $("#call_phone").val();
             // rtcStream.sipCall('call-audio', call_phone)
-            cc.callSession.makeCall({"calledDevice": $("#call_phone").val(),"callType": "video"})
+            cc.callSession.makeCall({"calledDevice": $("#call_phone").val(),"callType":$("#callType").val(),"duplexMode":$("#duplexMode").val(),"userID":$("#userID").val()})
+            // cc.callSession.makeCall({"calledDevice": $("#call_phone").val(),"callType": "video"})
         } else {
             alert("号码不可用")
         }

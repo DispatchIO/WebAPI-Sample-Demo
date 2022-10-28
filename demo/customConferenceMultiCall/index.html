@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Dispatch WebSDK API</title>
+    <script src="../assets/jquery-3.4.1.min.js"></script>
+    <script src="/assets/dispatch-sdk.js"></script>
+    <!-- <script src="https://120.26.125.181/js/dispatch-sdk.js"></script> -->
+    <link rel="stylesheet" href="./index.css">
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
+        integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin="anonymous"></script>
+
+    <script src="https://cdn.staticfile.org/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+
+    <!-- 导入axios依赖包-->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- cryptoJs 依赖包 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.1.1/crypto-js.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+    <style>
+        .input-group{
+            margin-bottom: 1%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!--
+Create the banner at the top of the page.
+-->
+    <div class="container-fluid banner">
+        <p class="banner-text">会议创建</p>
+        <a style="color: rgb(255, 255, 255);fill: rgb(255, 255, 255);fill-rule: evenodd; position: absolute; right: 10px; top: 4px;"
+            class="Header-link " href="https://github.com/DispatchIO/WebAPI-Sample-Demo/tree/master">
+            <svg class="octicon octicon-mark-github v-align-middle" height="32" viewBox="0 0 16 16" version="1.1"
+                width="32" aria-hidden="true">
+                <path fill-rule="evenodd"
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                </path>
+            </svg>
+        </a>
+    </div>
+
+
+    <div class="container">
+        <div class="panel panel-default">
+            <h3 class="panel-heading">会议列表</h3>
+
+            <div class="panel-body">
+                <button type="button" id="createMeet" data-toggle="modal" data-target="#meet_info" class="btn btn-default">创建会议</button>
+
+            </div>
+            <!-- Table -->
+            <table class="table" id="">
+                <thead>
+                    <tr>
+                        <th>选择</th>
+                        <th>序列号</th>
+                        <th>会议名称</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="meet_list">
+                </tbody>
+
+
+            </table>
+        </div>
+        <!-- 创建会议 -->
+        <div class="modal fade" id="meet_info" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                                aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="myModalLabel">会议信息</h4>
+                    </div>
+                    <div class="modal-body" id="content">
+                        <div class="input-group">
+                            <span class="input-group-addon" >会议名称</span>
+                            <input type="text" class="form-control" id="meet_name">
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-addon" >会议号码</span>
+                            <input type="text" class="form-control" id="meet_num">
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-addon" >会议模式</span>
+                            <select class="form-control" id="meet_mode">
+                                <option value="audio">语音会议</option>
+                                <option value="video">视频会议</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-addon" >默认发言</span>
+                            <select class="form-control" id="meet_is_speak">
+                                <option value="yes">是</option>
+                                <option value="no">否</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-addon" >是否呼入</span>
+                            <select class="form-control" id="meet_callin_state">
+                                <option value="0">否</option>
+                                <option value="1">是</option>
+                            </select>
+                        </div>
+                        <div id="meet_callin_select" hidden="hidden">
+                            <div class="input-group" >
+                                <label class="input-group-addon">呼入号码</label>
+                                <input type="text" class="form-control" id="meet_callin_num">
+                            </div>
+                            <div class="input-group" >
+                                <span class="input-group-addon" >呼入密码</span>
+                                <input type="text" class="form-control" id="meet_callin_pwd">
+                            </div>
+                        </div>
+                        
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="sub" class="btn btn-default">提交</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script src="/assets/config.js"></script>
+
+<script>
+    $("#meet_callin_state").change(function(msg){
+        if ($(this).val()==1){
+            $("#meet_callin_select").show();
+        }else{
+            $("#meet_callin_select").hide();
+        }
+
+    })
+
+    // 创建会议
+    $("#sub").click(function(){
+        let param = { "meetName":$("#meet_name").val(), "meetNum":$("#meet_num").val(), "meetMode":$("#meet_mode").val(), "isAllowSpeak":$("#meet_is_speak").val(), "callinState":$("#meet_callin_state").val(), "callinNum":$("#meet_callin_num").val(), "callinPwd":$("#meet_callin_pwd").val() };
+        cc.conferenceRoom.createMeet(param).then(function(msg){
+            alert("创建成功");
+            location.reload();
+        })
+    })
+    // 获取会议列表
+    cc.conferenceRoom.listMeet().then((msg) => {
+        console.log(msg);
+        let meet_list = msg.data.list;
+
+        for (i = 0;i<meet_list.length;i++){
+            $("#meet_list").append('<tr><td><input type="checkbox" name="'+meet_list[i].meetID+'" value="123"></td><td>'+(i+1)+'</td><td>'+meet_list[i].meetName+'</td><td>  <a href="./meet/index.html?meetId='+meet_list[i].meetID+'">进入会议</a></td></tr>')
+        }
+
+    })
+
+
+</script>
+
+</html>

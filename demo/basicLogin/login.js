@@ -1,5 +1,8 @@
+
+let serverAddr = "120.26.125.181";
+
 // 创建一个Client对象，cc=CreateClient
-const cc = DispRTC.createClient({"server": "https://192.168.1.200"});
+const cc = DispRTC.createClient({"server": "https://"+serverAddr});
 
 
 

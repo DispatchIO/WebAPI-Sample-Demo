@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Dispatch WebSDK API</title>
+    <script src="/assets/jquery-3.4.1.min.js"></script>
+    <script src="/assets/dispatch-sdk.js"></script>
+    <link rel="stylesheet" href="./index.css">
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+          integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
+          integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+            integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+            crossorigin="anonymous"></script>
+
+    <script src="https://cdn.staticfile.org/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+
+    <!-- 导入axios依赖包-->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- cryptoJs 依赖包 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.1.1/crypto-js.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+
+</head>
+
+<body>
+
+<!--
+Create the banner at the top of the page.
+-->
+<div class="container-fluid banner">
+    <p class="banner-text">语音通知</p>
+    <a style="color: rgb(255, 255, 255);fill: rgb(255, 255, 255);fill-rule: evenodd; position: absolute; right: 10px; top: 4px;"
+       class="Header-link " href="https://github.com/DispatchIO/WebAPI-Sample-Demo/tree/master">
+        <svg class="octicon octicon-mark-github v-align-middle" height="32" viewBox="0 0 16 16" version="1.1"
+             width="32" aria-hidden="true">
+            <path fill-rule="evenodd"
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+            </path>
+        </svg>
+    </a>
+</div>
+
+
+<div class="container">
+
+    <div class="alert alert-danger alert-dismissible" id="alert_data" role="alert" hidden="false">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                aria-hidden="true">&times;</span></button>
+        <strong id="alert_info"></strong>
+        <span id="alert_msg"></span>
+    </div>
+
+
+    <form id="join-form" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-2 control-label">主叫号码</label>
+            <div class="col-sm-10">
+                <select id="phones" class="form-control">
+
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">呼叫类型</label>
+            <div class="col-sm-10">
+                <select id="call_type" class="form-control">
+                    <option value="audio">语音呼叫</option>
+                    <option value="video">视频呼叫</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="content" class="col-sm-2 control-label">被叫号码</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" id="call_phone" placeholder="被叫号码">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="button" id="call_answer" class="btn btn-default" disabled>接听</button>
+                <button type="button" id="call_hangup" class="btn btn-default">挂断</button>
+                <button type="button" id="call_btn" class="btn btn-default">呼叫</button>
+
+                <button type="button" id="user_info_btn" class="btn btn-default" data-toggle="modal"
+                        data-target="#user_info">查看手柄号注册信息
+                </button>
+
+            </div>
+        </div>
+
+    </form>
+
+    <div class="video">
+        <span style="position: absolute">远端视频画面</span>
+        <video width="49.5%" id="remote_video" src=""></video>
+        <span style="position: absolute">本端视频画面</span>
+        <video width="49.5%" id="local_video" src=""></video>
+    </div>
+
+
+    <!--查看操作员信息-->
+
+    <div class="modal fade" id="user_info" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">手柄号注册</h4>
+                </div>
+                <div class="modal-body" id="content">
+                    <div class="input-group">
+                        <span class="input-group-addon" id="left_phone">null</span>
+                        <input type="password" class="form-control" id="left_phone_password" placeholder="左手柄密码">
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="sub" class="btn btn-default">提交</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+<script src="/assets/config.js"></script>
+
+<script>
+
+    cc.getOperatorInfo().then(function (msg) {
+        $("#left_phone").text(msg.data.mainTel)
+        $("#phones").append('<option>' + msg.data.mainTel + '</option>')
+    })
+
+    if (!sip_num_flag){
+        alert("手柄未注册")
+    }
+
+    $("#user_info_btn").click(function () {
+        if (rtcStream.password != null) {
+            $("#left_phone_password").val(rtcStream.password)
+        }
+    })
+
+    $("#sub").click(function () {
+
+
+        rtcStream.setRegisterProfile($("#left_phone").text(), $("#left_phone_password").val())
+        rtcStream.init();
+        sip_num_flag = true;
+        $('#user_info').modal('toggle');
+
+    })
+    // 监听呼入状态
+    rtcStream.on("on_new_call", (msg) => {
+        $("#call_answer").attr("disabled", false)
+    });
+
+    // 监听挂断状态
+    rtcStream.on("on_hangup", (msg) => {
+        $("#call_answer").attr("disabled", true)
+
+    });
+
+    // 接听
+    $("#call_answer").click(function () {
+        rtcStream.sipAnswer("remote_video", "local_video")
+    })
+
+    // 挂断
+    $("#call_hangup").click(function () {
+        $("#call_answer").attr("disabled", true)
+
+        rtcStream.sipHangUp()
+        // cc.callSession.clearCall()
+    })
+
+    // 呼叫
+    $("#call_btn").click(function () {
+        if (sip_num_flag) {
+            cc.callSession.makeCall({"calledDevice": $("#call_phone").val(),"callType": $("#call_type").val()})
+        } else {
+            alert("号码未注册")
+        }
+    });
+</script>
+
+</html>

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta
+      name="Keywords"
+      content="doubango, sipML5, VoIP, HTML5, WebRTC, RTCWeb, SIP, IMS, Video chat, VP8, live demo "
+    />
+    <meta
+      name="Description"
+      content="HTML5 SIP client using WebRTC framework"
+    />
+    <title>demo</title>
+    <script type="text/javascript" src="js/vue.js"></script>
+    <script type="text/javascript" src="js/element-ui.js"></script>
+    <link rel="stylesheet" href="css/element-ui.css" />
+    <script src="js/webrtc2sip.js" type="text/javascript"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <el-row>
+        <el-col class="register">
+          <el-card>
+            <div slot="header">
+              <span style="font-size: 18px;">SIP注册</span>
+              <label
+                style="float: right; padding: 3px 0;"
+                align="center"
+                id="txtRegStatus"
+                >{{txtRegStatus}}</label
+              >
+            </div>
+            <el-button type="info" @click="saveForm()" size="mini"
+              >保存配置</el-button
+            >
+            <el-form
+              :model="registerForm"
+              :rules="rules"
+              ref="registerForm"
+              label-width="100px"
+              size="small"
+            >
+              <el-form-item> </el-form-item>
+              <!--<el-form-item label="显示名称" prop="name">-->
+                <!--<el-input-->
+                  <!--v-model="registerForm.name"-->
+                  <!--placeholder="请输入显示名称"-->
+                  <!--clearable-->
+                <!--&gt;</el-input>-->
+              <!--</el-form-item>-->
+              <el-form-item label="SIP号码" prop="phone">
+                <el-input
+                  v-model="registerForm.phone"
+                  placeholder="请输入SIP号码"
+                  clearable
+                ></el-input>
+              </el-form-item>
+              <el-form-item label="密码" prop="password">
+                <el-input
+                  type="password"
+                  v-model="registerForm.password"
+                  placeholder="请输入密码"
+                  clearable
+                ></el-input>
+              </el-form-item>
+              <!--<el-form-item label="SIP服务器" prop="realm">-->
+                <!--<el-input-->
+                  <!--v-model="registerForm.realm"-->
+                  <!--placeholder="请输入SIP服务器"-->
+                  <!--clearable-->
+                <!--&gt;</el-input>-->
+              <!--</el-form-item>-->
+              <el-form-item label="WS服务器" prop="websocketServer">
+                <el-input
+                  v-model="registerForm.websocketServer"
+                  placeholder="请输入websocket服务器"
+                  clearable
+                ></el-input>
+              </el-form-item>
+              <el-form-item label="ICE服务器" prop="iceServers">
+                <el-input
+                  v-model="registerForm.iceServers"
+                  placeholder="多个以英文逗号(,)隔开"
+                  clearable
+                ></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button
+                  type="success"
+                  @click="register()"
+                  id="btnRegister"
+                  size="mini"
+                  :disabled="btnRegisterDisabled"
+                  >登录
+                </el-button>
+                <el-button
+                  type="danger"
+                  @click="unRegister()"
+                  id="btnUnRegister"
+                  size="mini"
+                  :disabled="btnUnRegisterDisabled"
+                  >登出</el-button
+                >
+              </el-form-item>
+            </el-form>
+          </el-card>
+        </el-col>
+        <el-col class="controller">
+          <el-card>
+            <div slot="header">
+              <span style="font-size: 18px;">呼叫控制</span>
+              <label
+                style="float: right; padding: 3px 50px 3px 0px;"
+                align="center"
+                id="txtCallStatus"
+                >{{txtCallStatus}}</label
+              >
+            </div>
+            <div style="margin-bottom: 20px;">
+              <el-input
+                v-model="phoneNumber"
+                placeholder="请输入要拨打的号码"
+                id="txtPhoneNumber"
+                clearable
+              ></el-input>
+            </div>
+            <div>
+              <el-button
+                type="success"
+                icon="el-icon-microphone"
+                size="mini"
+                :disabled="btnCallDisabled"
+                @click="call('call-audio')"
+                >语音</el-button
+              >
+              <el-button
+                type="success"
+                icon="el-icon-video-camera"
+                size="mini"
+                :disabled="btnCallDisabled"
+                @click="call('call-audiovideo')"
+                >视频</el-button
+              >
+              <el-button
+                      type="success"
+                      icon="el-icon-video-camera"
+                      size="mini"
+                      :disabled="btnCallDisabled"
+                      @click="call('call-halfaudio')"
+              >语音半双工</el-button>
+              <el-button
+                      type="success"
+                      icon="el-icon-video-camera"
+                      size="mini"
+                      :disabled="btnCallDisabled"
+                      @click="call('call-halfvideo')"
+              >视频半双工</el-button>
+              <el-button
+                      type="success"
+                      icon="el-icon-video-camera"
+                      size="mini"
+                      :disabled="btnCallDisabled"
+                      @click="call('call-live')"
+              >直播</el-button>
+              <el-button
+                type="success"
+                icon="el-icon-phone-outline"
+                size="mini"
+                :disabled="btnCallDisabled"
+                @click="call('local-video')"
+                >屏幕共享</el-button
+              >
+              <el-button
+                type="primary"
+                icon="el-icon-phone-outline"
+                size="mini"
+                :disabled="btnAnswerDisabled"
+                @click="callAnswer"
+                >接听</el-button
+              >
+              <el-button
+                type="danger"
+                icon="el-icon-error"
+                size="mini"
+                :disabled="btnHangUpDisabled"
+                @click="hangUp"
+                >{{hangUpText}}</el-button
+              >
+              <el-button
+                      type="primary"
+                      icon="el-icon-error"
+                      size="mini"
+                      :disabled="btnPttRequestDisabled"
+                      @click="request"
+              >{{requestResult? "放权":"抢权"}}</el-button
+              >
+              <label
+                      style="float: right; padding: 3px 50px 3px 0px;"
+                      align="center"
+                      id="txtPttStatus"
+              >{{txtPttStatus}}</label
+              >
+            </div>
+          </el-card>
+          <el-card>
+            <div id="divVideo" class="div-video">
+              <div
+                id="divVideoRemote"
+                style="
+                  position: relative;
+                  border: 1px solid #009;
+                  height: 100%;
+                  width: 100%;
+                  z-index: auto;
+                  opacity: 1;
+                "
+              >
+                <video
+                  class="video"
+                  width="100%"
+                  height="100%"
+                  id="video_remote"
+                  autoplay="autoplay"
+                  style="
+                    opacity: 0;
+                    background-color: #000000;
+                    -webkit-transition-property: opacity;
+                    -webkit-transition-duration: 2s;
+                  "
+                ></video>
+              </div>
+
+              <div
+                id="divVideoLocalWrapper"
+                style="margin-left: 0px; border: 0px solid #009; z-index: 1000;"
+              >
+                <iframe
+                  class="previewvideo"
+                  style="border: 0px solid #009; z-index: 1000;"
+                >
+                </iframe>
+                <div
+                  id="divVideoLocal"
+                  class="previewvideo"
+                  style="border: 0px solid #009; z-index: 1000;"
+                >
+                  <video
+                    class="video"
+                    width="100%"
+                    height="100%"
+                    id="video_local"
+                    autoplay="autoplay"
+                    muted="true"
+                    style="
+                      opacity: 0;
+                      background-color: #000000;
+                      -webkit-transition-property: opacity;
+                      -webkit-transition-duration: 2s;
+                    "
+                  ></video>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
+    <!-- Audios -->
+    <audio id="audio_remote" autoplay="autoplay"></audio>
+
+    <script>
+      var app = new Vue({
+        el: "#app",
+        data: {
+          videoRemote: undefined,
+          videoLocal: undefined,
+          audioRemote: undefined,
+
+          btnRegisterDisabled: false,
+          btnUnRegisterDisabled: true,
+          btnCallDisabled: true,
+          btnAnswerDisabled: true,
+          btnHangUpDisabled: true,
+          btnPttRequestDisabled:true,
+
+          txtRegStatus: undefined,
+          txtCallStatus: undefined,
+          txtPttStatus: undefined,
+          calltype: undefined,
+
+          requestResult: false,
+
+          //sip登录表单
+          registerForm: {
+            phone: "803", // SIP号码(登录用户号码)
+            password: "FH2020", // 密码
+            websocketServer: "192.168.1.201:8082", // websocket服务器
+            iceServers: "", // ICE服务器
+          },
+          // 表单验证
+          rules: {
+            phone: [
+              {
+                required: true,
+                message: "请输入SIP号码",
+                trigger: "blur",
+              },
+            ],
+            password: [
+              {
+                required: true,
+                message: "请输入密码",
+                trigger: "blur",
+              },
+            ],
+            websocketServer: [
+              {
+                required: true,
+                message: "请输入websocket服务器",
+                trigger: "blur",
+              },
+            ],
+          },
+          phoneNumber: "801",
+          webrtc2Sip: null,
+          started: false,
+          connected: false,
+          hangUpText: "挂断",
+        },
+        methods: {
+          call(type) {
+            if (this.webrtc2Sip) {
+              this.calltype = type;
+              if (!this.webrtc2Sip.sipCall(type, this.phoneNumber)) {
+                this.$message({
+                  message: "呼叫失败",
+                  showClose: true,
+                  duration: 3 * 1000,
+                  type: "error",
+                });
+              }
+            }
+          },
+          callLocal(){
+
+            this.webrtc2Sip.gotLocalMedia();
+          },
+          callAnswer() {
+            if (this.webrtc2Sip) {
+              this.webrtc2Sip.sipAnswer();
+              this.btnAnswerDisabled = true;
+              this.hangUpText = "挂断";
+            }
+          },
+          hangUp() {
+            if (this.webrtc2Sip) {
+              this.txtCallStatus = "结束呼叫中...";
+              this.webrtc2Sip.sipHangUp();
+              this.uiCallTerminated("");
+            }
+          },
+          // 初始化
+          webrtc2SipInit() {
+            var videoLocal = (this.videoLocal = document.getElementById(
+              "video_local"
+            ));
+            var videoRemote = (this.videoRemote = document.getElementById(
+              "video_remote"
+            ));
+            var audioRemote = (this.audioRemote = document.getElementById(
+              "audio_remote"
+            ));
+            var containers = {
+              videoLocal,
+              videoRemote,
+              audioRemote,
+            };
+            this.webrtc2Sip = Webrtc2Sip(containers, this.sessionEvent);
+          },
+          // 注册
+          register() {
+            this.$refs["registerForm"].validate((valid) => {
+              if (valid) {
+                this.btnRegisterDisabled = true;
+                if (!this.webrtc2Sip) this.webrtc2SipInit();
+                if (this.webrtc2Sip) {
+                  if (
+                    !this.webrtc2Sip.register(
+                      this.registerForm,
+                      this.stackEvent)
+                  ) {
+                    this.txtRegStatus = "注册失败";
+                    this.btnRegisterDisabled = false;
+                  }
+                } else {
+                  this.btnRegisterDisabled = false;
+                }
+              }
+            });
+          },
+          request() {
+            if(!this.requestResult) {
+              this.webrtc2Sip.sipRequest();
+            } else {
+              this.webrtc2Sip.sipRelease();
+              this.requestResult = false;
+            }
+          },
+          unRegister() {
+            if (this.webrtc2Sip) this.webrtc2Sip.unRegister();
+            this.started = false;
+          },
+          // e.type为事件类型，只有started后才可进行其他操作
+          // e.description为事件描述
+          // 开发时选用对应的事件进行处理相关业务
+          stackEvent(e) {
+            console.log(e);
+            switch (e.type) {
+              case "started": {
+                this.started = true;
+                break;
+              }
+              case "stopped":
+              case "failed_to_start": {
+                this.started = false;
+                this.txtRegStatus = "登录失败";
+                this.txtCallStatus = "";
+                this.txtPttStatus = "";
+                this.uiOnConnectionEvent(false, false);
+                this.uiVideoDisplayEvent(false, false);
+                this.uiVideoDisplayEvent(true, false);
+                break;
+              }
+              case "i_new_call": {
+                var sRemoteNumber = this.webrtc2Sip.getCallName();
+                this.calltype = this.webrtc2Sip.getCallType();
+                var ctyep = "";
+                if (this.calltype === "audio/video") {
+                  ctyep = "视频呼叫: "
+                } else if (this.calltype === "half/audio") {
+                  ctyep = "语音半双工呼叫: "
+                } else if (this.calltype === "half/video") {
+                  ctyep = "视频半双工呼叫: "
+                }else{
+                  ctyep = "语音呼叫: "
+                }
+                this.txtCallStatus = ctyep + sRemoteNumber + "来电";
+                this.hangUpText = "拒接";
+                this.btnAnswerDisabled = false;
+                this.btnCallDisabled = true;
+                this.btnHangUpDisabled = false;
+                break;
+              }
+              case "starting":
+                this.txtRegStatus = "登录中";
+                break;
+              default:
+                break;
+            }
+          },
+          // e.type为事件类型，只有connected后才可进行其他操作
+          // e.description为事件描述
+          // 开发时选用对应的事件进行处理相关业务
+          // sessionType: 会话类型，Registration注册 Call呼叫
+          sessionEvent(e, sessionType) {
+            console.log(e, sessionType);
+            switch (e.type) {
+              case "connecting":
+                if (sessionType === "Registration") {
+                  //注册事件
+                  this.txtRegStatus = "登录中";
+                } else if (sessionType === "Call") {
+                  // 呼叫事件
+                  this.txtCallStatus = "呼叫中";
+                  this.btnCallDisabled = true;
+                  this.hangUpText = "挂断";
+                  this.btnHangUpDisabled = false;
+                }
+                break;
+              case "connected": {
+                var bConnected = (e.type == "connected");
+                if (sessionType === "Registration") {
+                  //注册事件
+                  this.connected = true;
+                  this.txtRegStatus = "登录成功";
+                  this.uiOnConnectionEvent(bConnected, !bConnected);
+                } else if (sessionType === "Call") {
+                  // 呼叫事件
+                  this.txtCallStatus = "通话中";
+
+                  if (this.calltype === "call-audiovideo" || this.calltype === "audio/video") {
+                    this.uiVideoDisplayEvent(false, true);
+                    this.uiVideoDisplayEvent(true, true);
+                  } else {
+                    this.uiVideoDisplayEvent(false, false);
+                    this.uiVideoDisplayEvent(true, false);
+                  }
+
+                  if(this.calltype === "call-halfaudio" || this.calltype === "half/audio") {
+                    this.btnPttRequestDisabled = false;
+                    this.requestResult = false;
+                    this.txtPttStatus = "空闲";
+                  }
+
+                  if(this.calltype === "call-halfvideo" || this.calltype === "half/video") {
+                    this.uiVideoDisplayEvent(false, true);
+                    this.uiVideoDisplayEvent(true, true);
+                    this.btnPttRequestDisabled = false;
+                    this.requestResult = false;
+                    this.txtPttStatus = "空闲";
+                  }
+
+                  if(this.calltype === "call-live") {
+                    this.uiVideoDisplayEvent(false, true);
+                    this.uiVideoDisplayEvent(true, false);
+                   this.btnPttRequestDisabled = false;
+                    this.requestResult = false;
+                    this.txtPttStatus = "空闲";
+                  }
+                }
+                break;
+              }
+              case "terminating":
+              case "terminated": {
+                if (sessionType === "Registration") {
+                  this.connected = false;
+                  this.uiOnConnectionEvent(false, false);
+                } else if (sessionType === "Call") {
+                  this.uiCallTerminated(e.description);
+                }
+                break;
+              }
+              case "i_ao_request": {
+                this.txtCallStatus = "振铃中...";
+                break;
+              }
+              case "requested": {
+                this.requestResult = true;
+                this.txtPttStatus = "自己 发言中...";
+                break;
+              }
+              case "failed_to_request": {
+                this.txtPttStatus = "抢权失败";
+                break;
+              }
+              case "released": {
+                this.txtPttStatus = "空闲";
+                this.requestResult = false;
+                break;
+              }
+              case "on_requested": {
+                this.requestResult = false;
+                this.txtPttStatus = this.webrtc2Sip.getRequestName() + " 发言中...";
+                break;
+              }
+              case "on_released": {
+                this.txtPttStatus = "空闲";
+              }
+            }
+          },
+          saveForm() {
+            if (window.localStorage)
+              window.localStorage.setItem(
+                "sipform",
+                JSON.stringify(this.registerForm)
+              );
+          },
+          resetForm(formName) {
+            this.$refs[formName].resetFields();
+            if (window.localStorage) window.localStorage.removeItem("sipform");
+          },
+
+          uiOnConnectionEvent(b_connected, b_connecting) {
+            this.btnRegisterDisabled = b_connected || b_connecting;
+            this.btnUnRegisterDisabled = !b_connected && !b_connecting;
+            this.btnCallDisabled = !(b_connected);
+            this.btnPttRequestDisabled = true;
+            this.btnAnswerDisabled = true;
+            this.btnHangUpDisabled = true;
+          },
+
+          uiVideoDisplayEvent(b_local, b_added) {
+            var o_elt_video = b_local ? this.videoLocal : this.videoRemote;
+            if (b_added) {
+              o_elt_video.style.opacity = 1;
+            } else {
+              o_elt_video.style.opacity = 0;
+            }
+          },
+          uiCallTerminated(s_description) {
+            this.btnCallDisabled = false;
+            this.btnPttRequestDisabled = true;
+            this.btnHangUpDisabled = true;
+            this.btnAnswerDisabled = true;
+            this.txtCallStatus = s_description;
+            this.uiVideoDisplayEvent(false, false);
+            this.uiVideoDisplayEvent(true, false);
+            const self = this;
+            self.txtCallStatus = "";
+            this.txtPttStatus = "";
+            this.requestResult = false;
+          },
+        },
+        mounted() {
+          if (window.localStorage) {
+            var str = window.localStorage.getItem("sipform");
+            if (str) {
+              var form = JSON.parse(window.localStorage.getItem("sipform"));
+              this.registerForm = form;
+            }
+          }
+          this.webrtc2SipInit();
+        },
+      });
+    </script>
+    <style>
+      body {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0px;
+        padding: 0px;
+      }
+
+      @media screen and (max-width: 960px) {
+        .el-button {
+          width: 70px;
+        }
+      }
+
+      @media screen and (min-width: 960px) {
+        .el-row {
+          display: flex;
+          width: 100%;
+          height: 100%;
+          margin-top: 50px;
+        }
+        .box-card {
+          width: 100%;
+        }
+        .register {
+          /* background-color: #f5f5f5; */
+          margin-left: 30px;
+          margin-right: 30px;
+          width: 600px;
+        }
+        .controller {
+          margin-right: 30px;
+        }
+
+        .previewvideo {
+          position: absolute;
+          width: 128px;
+          height: 72px;
+          margin-top: -72px;
+        }
+
+        .div-video {
+          width: 480px;
+          height: 270px;
+          -webkit-transition-property: height;
+          -moz-transition-property: height;
+          -o-transition-property: height;
+          -webkit-transition-duration: 2s;
+          -moz-transition-duration: 2s;
+          -o-transition-duration: 2s;
+        }
+      }
+    </style>
+  </body>
+</html>

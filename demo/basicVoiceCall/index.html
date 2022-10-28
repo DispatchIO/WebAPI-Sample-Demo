@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
           integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
 
-    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <!-- 可填的 Bootstrap 主题文件（一般不用引入） -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
           integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
 
@@ -74,9 +74,36 @@ Create the banner at the top of the page.
         </div>
 
         <div class="form-group">
-            <label for="content" class="col-sm-2 control-label">被叫号码</label>
+            <label for="content" class="col-sm-2 control-label">被叫号码（参数必填）</label>
             <div class="col-sm-10">
                 <input type="text" class="form-control" id="call_phone" placeholder="被叫号码">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-2 control-label">呼叫类型（参数可填）</label>
+            <div class="col-sm-10">
+                <select id="callType" class="form-control">
+                    <option value="audio">语音呼叫</option>
+                    <option value="video">视频呼叫</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-2 control-label">呼叫类型（参数可填）</label>
+            <div class="col-sm-10">
+                <select id="duplexMode" class="form-control">
+                    <option value="full">全双工</option>
+                    <option value="half">半双工</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="content" class="col-sm-2 control-label">UserId（参数可填）</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" id="userID" placeholder="userID">
             </div>
         </div>
 
@@ -125,16 +152,10 @@ Create the banner at the top of the page.
 </div>
 
 </body>
+<script src="/assets/config.js"></script>
 
 <script>
-    sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"))
-    // 设置token
-    let token = JSON.parse($.cookie("DispRTC-token")).content;
-    const cc = DispRTC.createClient({"server": "https://192.168.1.200", "token": token});
-    const rtcStream = new DispRTC.RTCStream({
-        "client": cc, // 创建的Client对象
-        "wsServer": "wss://192.168.1.200"
-    });
+
     cc.getOperatorInfo().then(function (msg) {
         $("#left_phone").text(msg.data.mainTel)
         $("#phones").append('<option>' + msg.data.mainTel + '<option>')
@@ -150,9 +171,9 @@ Create the banner at the top of the page.
     $("#sub").click(function () {
 
         rtcStream.setRegisterProfile($("#left_phone").text(), $("#left_phone_password").val())
-        rtcStream.init().then(function (){
-            alert("初始化成功")
-        })
+        rtcStream.init()
+        $('#user_info').modal('toggle');
+
     })
     // 监听呼入状态
     rtcStream.on("on_new_call", (msg) => {
@@ -177,7 +198,7 @@ Create the banner at the top of the page.
 
             // let call_phone = $("#call_phone").val();
             // rtcStream.sipCall('call-audio', call_phone)
-            cc.callSession.makeCall({"calledDevice": $("#call_phone").val()})
+            cc.callSession.makeCall({"calledDevice": $("#call_phone").val(),"callType":$("callType").val(),"duplexMode":$("duplexMode").val(),"userID":$("userID").val()})
         } else {
             alert("号码不可用")
         }

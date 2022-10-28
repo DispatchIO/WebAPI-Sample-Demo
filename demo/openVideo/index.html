@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Dispatch WebSDK API</title>
+    <script src="../assets/jquery-3.4.1.min.js"></script>
+    <script src="/assets/dispatch-sdk.js"></script>
+    <script src="./webrtc2rtsp.js"></script>
+    <!-- <script src="https://120.26.125.181/js/dispatch-sdk.js"></script> -->
+    <link rel="stylesheet" href="./index.css">
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
+        integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin="anonymous"></script>
+
+    <script src="https://cdn.staticfile.org/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+
+    <!-- 导入axios依赖包-->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- cryptoJs 依赖包 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.1.1/crypto-js.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/2.5.0/socket.io.js"></script>
+    <style>
+        .input-group {
+            margin-bottom: 1%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!--
+Create the banner at the top of the page.
+-->
+    <div class="container-fluid banner">
+        <p class="banner-text">打开监控</p>
+        <a style="color: rgb(255, 255, 255);fill: rgb(255, 255, 255);fill-rule: evenodd; position: absolute; right: 10px; top: 4px;"
+            class="Header-link " href="https://github.com/DispatchIO/WebAPI-Sample-Demo/tree/master">
+            <svg class="octicon octicon-mark-github v-align-middle" height="32" viewBox="0 0 16 16" version="1.1"
+                width="32" aria-hidden="true">
+                <path fill-rule="evenodd"
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                </path>
+            </svg>
+        </a>
+    </div>
+
+
+    <div class="container">
+        <div class="panel panel-default">
+            <h3 class="panel-heading">打开监控</h3>
+
+            <div class="panel-body">
+
+                <h5>监控列表</h5>
+                <ul class="list-group" id="video_group"></ul>
+
+            </div>
+
+
+            </table>
+        </div>
+
+        <!--查看操作员手柄号注册-->
+
+        <div class="modal fade" id="video_info" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                                aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="myModalLabel">查看监控</h4>
+                    </div>
+                    <div class="modal-body" id="content">
+                        <video id="video" > </video>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+<script src="/assets/config.js"></script>
+
+<script>
+    cc.dataStorage.videoGroupSync("listsub")
+    .then(function (msg) {
+        for (const item of msg.data.list) {
+            $("#video_group").append(add_dom(item.groupID,item.groupName));
+            cc.dataStorage.videoSync("list",{"groupID":item.groupID}).then(function (msg2) {
+                let ul_dom = $('<ul class="list-group" id="video_item"></ul>');
+
+                for (const item2 of msg2.data.list) {
+                    let a = '<ul></ul>';
+                    let i = JSON.stringify(item2).replace(/\"/g,"'") ;
+                    ul_dom.append(add_dom(item2.videoID,item2.videoName,'  <button type="button" class="btn btn-success" onclick="open_video('+i+')">查看</button>'));
+                }
+                $("#"+item.groupID).append(ul_dom)
+            })
+        }
+    })
+
+
+
+    function add_dom(id,name,btn) {
+    
+        return '<li class="list-group-item" id="'+id+'">'+name+(btn?btn:"")+'</li>';
+    }
+
+    let rtspNode;
+    function open_video(video){
+        cc.videoSession.getRtspUrl(video).then(function(msg){
+            let rtspURL = msg.data.rtspUrl
+            let serverUrl = cc.server+"/rtspplay";
+            // rtspNode = new RtspNode(rtspURL, "http://192.168.1.200:8083", "video")
+            // 创建视频
+            rtspNode = new RtspNode(rtspURL, serverUrl, "video")
+
+        })
+        $("#video_info").modal("toggle");
+    }
+
+    $("#video_info").on("hide.bs.modal",function(e){
+        // 销毁视频
+        stopRtsp(rtspNode);
+    })
+
+
+
+</script>
+
+</html>

@@ -84,20 +84,10 @@ Create the banner at the top of the page.
     </div>
 
 </body>
+<script src="/assets/config.js"></script>
 
 <script>
-    try {
-        sessionStorage.setItem("DispRTC-token", $.cookie("DispRTC-token"))
-        // 设置token
-        let token = JSON.parse($.cookie("DispRTC-token")).content;
-        const cc = DispRTC.createClient({ "server": "https://192.168.1.200", "token": token });
-        const rtcStream = new DispRTC.RTCStream({
-            "client": cc, // 创建的Client对象
-            "wsServer": "wss://192.168.1.200"
-        });
-    } catch (e) {
-        alert("未登录");
-    }
+
 
 
 
@@ -125,10 +115,8 @@ Create the banner at the top of the page.
             }
         })
     } else {
-        alert("meetId参数为空");
+        alert("meetId参数为空,请在地址栏上加入?meetId=你的会议id");
     }
-
-
 
 </script>
 
