@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>组呼 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          组呼
+        </div>
+
+        <div
+          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="10" class="px-2">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              :rules="rules"
+              class="w-full"
+            >
+              <el-form-item prop="groupID" label="组ID">
+                <el-input v-model="form.groupID"></el-input>
+              </el-form-item>
+              <el-form-item prop="callMode" label="呼叫模式">
+                <el-select v-model="form.callMode">
+                  <el-option label="同时呼叫" value="parallel"></el-option>
+                  <el-option label="顺序呼叫" value="serial"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="meetMode" label="会议类型">
+                <el-select v-model="form.meetMode">
+                  <el-option label="语音会议" value="audio"></el-option>
+                  <el-option label="视频会议" value="video"></el-option>
+                </el-select>
+              </el-form-item>
+
+              <el-form-item>
+                <el-button @click="handleSubmit" type="primary">
+                  加入会议
+                </el-button>
+                <el-button
+                  type="success"
+                  :disabled="!isNewCall"
+                  @click="handleAnswer"
+                >
+                  接听
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="14" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="10" />
+            </div>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            groupID: "",
+            meetMode: "audio",
+            callMode: "parallel",
+          });
+          const formRef = ref(null);
+          const eventData = ref();
+          const rules = ref({
+            groupID: [
+              {
+                required: true,
+                message: "请输入组ID",
+                trigger: "blur",
+              },
+            ],
+          });
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+
+          /**
+           * 提交表单
+           */
+          const handleSubmit = () => {
+            formRef.value.validate((valid, fields) => {
+              if (valid) {
+                DispRTC.client.callSessions
+                  .groupCall(form.value)
+                  .then((res) => {
+                    ElementPlus.ElMessage({
+                      type: "success",
+                      message: "调用组呼接口成功",
+                      showClose: true,
+                    });
+                  })
+                  .catch((err) => {
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          function handleAnswer() {
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.callType === "audio/video" ? "video" : "audio",
+            });
+          }
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                if ([403, 480].includes(data.code)) {
+                  //清除本地缓存
+                  localStorage.removeItem("DispRTC-token");
+                }
+                break;
+              case "MeetMemberEvent_Add": //会议成员事件-新增
+              case "MeetMemberEvent_Del": //会议成员事件-删除
+                break;
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            formRef,
+            rules,
+            handleSubmit,
+            eventData,
+            handleAnswer,
+            isNewCall,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

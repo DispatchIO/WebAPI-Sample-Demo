@@ -52,7 +52,7 @@
                 <el-button class="absolute right-4 bottom-4" type="primary">
                   <el-link
                     class="text-white"
-                    :href="`./${child.value}/index.html`"
+                    :href="`./${item.value}/${child.value}.html`"
                     :underline="false"
                     target="_blank"
                   >
@@ -71,55 +71,74 @@
 
       createApp({
         setup() {
+          console.error(
+            "DispRTC-token 211",
+            sessionStorage.getItem("DispRTC-token")
+          );
           const anchors = ref([
             {
               label: "基础示例",
               value: "basic",
               children: [
-                { label: "用户登录", value: "basicLogin" },
+                { label: "用户登录", value: "login" },
                 { label: "事件订阅", value: "eventSubscribe" },
-                { label: "获取用户呼入队列", value: "callQueueList" },
-                { label: "获取用户号码状态", value: "callConnstatusList" },
-                { label: "语音通话", value: "basicVoiceCall" },
-                { label: "视频通话", value: "basicVideoCall" },
-                { label: "通话挂断", value: "clearCall" },
-                { label: "通话拆线", value: "clearConnection" },
-                { label: "通话应答", value: "answerCall" },
-                { label: "呼叫保持", value: "holdCall" },
-                { label: "呼叫转移", value: "transferCallSingle" },
-                { label: "呼叫转接", value: "transferCall" },
-                { label: "强插/强拆/强断/监听", value: "forceInsertCall" },
-                { label: "呼叫广播", value: "broadcastCall" },
-                { label: "点名", value: "rollCall" },
-                { label: "轮询", value: "pollCall" },
-                { label: "强呼", value: "advanceCall" },
+                { label: "软电话注册", value: "softPhone" },
+                // { label: "获取用户呼入队列", value: "callQueueList" },
+                // { label: "获取用户号码状态", value: "callConnstatusList" },
               ],
             },
             {
-              label: "进阶示例",
-              value: "advanced",
+              label: "呼叫示例",
+              value: "call",
               children: [
-                { label: "获取会议列表", value: "conferenceroomList" },
-                { label: "获取会议详细信息", value: "conferenceroomGet" },
-                { label: "获取会议成员", value: "conferenceroomMember" },
-                { label: "创建会议", value: "conferenceroomCreate" },
-                { label: "加入会议", value: "joinmeetCall" },
+                { label: "语音通话", value: "audioCall" },
+                { label: "视频通话", value: "videoCall" },
+                { label: "通话挂断", value: "clearCall" },
+                // { label: "通话拆线", value: "clearConnection" },
+                // { label: "通话应答", value: "answerCall" },
+                // { label: "呼叫保持", value: "holdCall" },
+                // { label: "呼叫转移", value: "transferCallSingle" },
+                // { label: "呼叫转接", value: "transferCall" },
+                // { label: "强插/强拆/强断/监听", value: "forceInsertCall" },
+                // { label: "点名", value: "rollCall" },
+                // { label: "轮询", value: "pollCall" },
+                // { label: "强呼", value: "advanceCall" },
+              ],
+            },
+            {
+              label: "会议示例",
+              value: "conference",
+              children: [
+                { label: "创建会议", value: "createMeet" },
+                { label: "获取会议列表", value: "listMeet" },
+                { label: "获取会议详细信息", value: "getMeetDetail" },
+                { label: "加入会议", value: "joinMeetCall" },
                 { label: "组呼", value: "groupCall" },
                 { label: "选呼", value: "selectCall" },
-                { label: "会议锁定", value: "conferenceroomLock" },
-                { label: "会议广播", value: "conferenceroomBroadcast" },
-                { label: "会议发言/禁言", value: "conferenceroomSpeak" },
-                { label: "会议踢出", value: "conferenceroomKick" },
-                { label: "结束会议", value: "conferenceroomDestroy" },
-                { label: "打开视频监控", value: "openVideo" },
-                { label: "云台控制", value: "ptzControl" },
-                { label: "视频会商", value: "conferenceroomMix" },
-                { label: "视频分发", value: "videoDispense" },
-                { label: "获取通话视频图像", value: "getVideoRtspUrl" },
+                { label: "获取会议成员", value: "listMeetMember" },
+                { label: "会议踢人/结束会议", value: "kickMeet" },
+                { label: "删除会议", value: "deleteMeet" },
+                { label: "会议发言/禁言", value: "allowSpeak" },
+                { label: "视频会商", value: "startMeetVideoMix" },
+                // { label: "会议锁定", value: "conferenceroomLock" },
+                // { label: "会议广播", value: "conferenceroomBroadcast" },
+
+                // { label: "会议踢出", value: "conferenceroomKick" },
+
+                // { label: "打开视频监控", value: "openVideo" },
+                // { label: "云台控制", value: "ptzControl" },
+
+                // { label: "视频分发", value: "videoDispense" },
+                // { label: "获取通话视频图像", value: "getVideoRtspUrl" },
               ],
             },
             {
-              label: "短信",
+              label: "广播示例",
+              value: "broadcast",
+              children: [{ label: "呼叫广播", value: "broadcastCall" }],
+            },
+            {
+              label: "短信示例",
               value: "sms",
               children: [
                 { label: "获取短信列表", value: "smsList" },
@@ -129,7 +148,7 @@
               ],
             },
             {
-              label: "传真",
+              label: "传真示例",
               value: "fax",
               children: [
                 { label: "获取传真列表", value: "faxList" },
@@ -139,7 +158,7 @@
               ],
             },
             {
-              label: "位置订阅",
+              label: "位置订阅示例",
               value: "location",
               children: [
                 { label: "定位位置订阅", value: "gpsSubscribe" },
@@ -148,17 +167,17 @@
               ],
             },
             {
-              label: "通讯录",
+              label: "通讯录示例",
               value: "contact",
               children: [
-                { label: "部门查询", value: "groupSync" },
-                { label: "部门维护", value: "groupOperation" },
-                { label: "用户查询", value: "userSync" },
-                { label: "用户维护", value: "customVideoSource" },
+                { label: "部门查询", value: "group" },
+                // { label: "部门维护", value: "groupOperation" },
+                { label: "用户查询", value: "user" },
+                // { label: "用户维护", value: "customVideoSource" },
               ],
             },
             {
-              label: "场景",
+              label: "场景示例",
               value: "scense",
               children: [
                 { label: "一场会议", value: "customConferenceMultiCall" },

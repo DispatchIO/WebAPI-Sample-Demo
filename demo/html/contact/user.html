@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>用户查询 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          用户查询
+        </div>
+
+        <div
+          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="12" class="px-4">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              class="w-full"
+            >
+              <el-form-item prop="groupID" label="部门ID">
+                <el-input v-model="form.groupID" />
+              </el-form-item>
+              <el-form-item prop="keyWord" label="名称和号码">
+                <el-input v-model="form.keyWord" />
+              </el-form-item>
+              <el-form-item prop="beginIndex" label="分页起始行">
+                <el-input-number
+                  v-model="form.beginIndex"
+                  :min="0"
+                  :precision="0"
+                  step-strictly
+                />
+              </el-form-item>
+              <el-form-item prop="count" label="页数量">
+                <el-input-number
+                  v-model="form.count"
+                  :min="10"
+                  :precision="0"
+                  :step="10"
+                  step-strictly
+                />
+              </el-form-item>
+
+              <el-form-item>
+                <el-button @click="handleQuery" type="primary">查询</el-button>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="12" class="px-4">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              <div class="w-1/2">
+                用户ID ----
+                <span class="text-red-500">总条数:{{ total }}</span>
+              </div>
+              <div class="w-1/4">用户姓名</div>
+              <div class="w-1/4">默认号码</div>
+            </div>
+            <template v-for="item in userData">
+              <div class="flex items-center px-3">
+                <div class="w-1/2">{{ item.employeeID }}</div>
+                <div class="w-1/4">{{ item.realName }}</div>
+                <div class="w-1/4">{{ item.defaultNo }}</div>
+              </div>
+            </template>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            groupID: "", //部门编号，为空时查询所有用户
+            keyWord: "", //模糊匹配匹配名称，号码
+            beginIndex: 0, //分页起始行
+            count: 20, //页数量
+          });
+          const formRef = ref(null);
+          const userData = ref([]);
+          const total = ref(0);
+
+          /**
+           * 查询
+           */
+          const handleQuery = () => {
+            listUser();
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            if (eventType === "LoginStatus") {
+              ElementPlus.ElMessage.closeAll();
+              ElementPlus.ElMessage({
+                type: "warning",
+                message: data.msg,
+              });
+              if ([403, 480].includes(data.code)) {
+                isLogin.value = false;
+                //清除本地缓存
+                localStorage.removeItem("DispRTC-token");
+              }
+            } else if (
+              DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT === eventType
+            ) {
+              const event = data.event;
+              //来电
+              if (DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type) {
+                //接听按钮
+                rtcStream.value = data.rtcStream;
+                isNewCall.value = true;
+              } else if (
+                DispRTC.Types.RTCStreamEventType.ON_DISCONNECT === event.type ||
+                DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+              ) {
+                rtcStream.value = null;
+                isNewCall.value = false;
+              }
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+          //获取用户列表
+          const listUser = async () => {
+            DispRTC.client.dataStorage
+              .userSync(DispRTC.Types.DataAction.ACTION_LIST, form.value)
+              .then((res) => {
+                console.log("listUser", res.data);
+                userData.value = res.data.list;
+                total.value = res.data.total;
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                userData.value = [];
+                total.value = 0;
+              });
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            formRef,
+            handleQuery,
+            userData,
+            total,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

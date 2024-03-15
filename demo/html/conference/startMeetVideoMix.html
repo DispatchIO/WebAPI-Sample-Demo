@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>视频会商 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          视频会商
+        </div>
+
+        <div
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="16" class="px-2">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              :rules="rules"
+              class="w-full"
+              inline
+            >
+              <el-form-item prop="calledDevice" label="被叫号码">
+                <el-input v-model="form.calledDevice"></el-input>
+              </el-form-item>
+              <el-form-item prop="userID" label="被叫用户ID">
+                <el-input v-model="form.userID"></el-input>
+              </el-form-item>
+
+              <el-form-item>
+                <el-button @click="handleSubmit" type="primary">
+                  加入会议
+                </el-button>
+                <!-- <el-button
+                  type="success"
+                  :disabled="!isNewCall"
+                  @click="handleAnswer"
+                >
+                  接听
+                </el-button> -->
+              </el-form-item>
+            </el-form>
+            <div class="text-red-500 mb-2 pt-2">
+              说明：视频会商支持：1，2，4，6，8，9，13，16分屏。<br />
+              注意：混码视频源节点数量和混码类型(分屏数)要一致，不一致的源节点使用{}补足。<br />
+              本示例操作：选择混码视频源节点时，本示例为了方便操作，请先获取会议成员，再选择混码节点和混码类型。混码源可以使用视频监控，这里不一一演示。<br />
+              这里也不对会议的状态事件进行操作，实际使用时可以订阅会议状态事件，获取会议的改变，而不用向本例要手动获取会议详情。<br />
+            </div>
+            <el-form
+              ref="formRef2"
+              :model="form2"
+              label-width="auto"
+              :rules="rules2"
+              class="w-full"
+            >
+              <el-form-item prop="meetID" label="会议ID">
+                <div class="w-full flex flex-nowrap">
+                  <el-input v-model="form2.meetID"></el-input>
+                  <el-button
+                    class="ml-4"
+                    type="primary"
+                    @click="getMeetDetail()"
+                  >
+                    获取会议详细
+                  </el-button>
+                  <el-button
+                    class="ml-4"
+                    type="primary"
+                    @click="listMeetMember()"
+                  >
+                    获取会议成员
+                  </el-button>
+                  <el-button
+                    class="ml-4"
+                    type="danger"
+                    @click="handleEndMeet()"
+                  >
+                    结束会议
+                  </el-button>
+                </div>
+              </el-form-item>
+
+              <el-form-item prop="mixType" label="混码类型(分屏数)">
+                <div class="w-full flex flex-nowrap">
+                  <el-select v-model="form2.mixType">
+                    <el-option
+                      v-for="item in mixTypes"
+                      :label="item"
+                      :key="item"
+                      :value="item"
+                    ></el-option>
+                  </el-select>
+                </div>
+              </el-form-item>
+              <el-form-item prop="sources" label="混码视频源">
+                <div class="w-full flex flex-nowrap">
+                  <el-select v-model="form2.sources" multiple placeholder="">
+                    <el-option
+                      v-for="item in data"
+                      :label="item.activeDevice"
+                      :value="item.activeDevice"
+                    ></el-option>
+                  </el-select>
+                  <el-button class="ml-4" type="primary" @click="handleMix()">
+                    视频混码
+                  </el-button>
+                </div>
+              </el-form-item>
+            </el-form>
+
+            <el-row class="mt-2 w-full flex flex-nowrap" :gutter="10">
+              <el-col :span="16">
+                <div class="text-red-500">视频会商画面</div>
+                <video width="100%" id="mix_video"></video>
+              </el-col>
+              <el-col :span="8">
+                <div class="text-red-500">成员视频画面</div>
+                <video width="100%" id="user_video"></video>
+              </el-col>
+            </el-row>
+          </el-col>
+          <el-col :span="8" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="6" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              会议成员
+            </div>
+            <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+              <el-col :span="8">用户号码</el-col>
+              <el-col :span="8">号码状态</el-col>
+              <el-col :span="8">操作</el-col>
+            </div>
+            <template v-for="item in data">
+              <div class="flex items-center px-3 py-1">
+                <el-col :span="8">{{ item.activeDevice }}</el-col>
+                <el-col :span="8">{{ item.userStatus }}</el-col>
+                <el-col :span="8">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    @click="handleUserVideo(item)"
+                  >
+                    查看视频
+                  </el-button>
+                </el-col>
+              </div>
+            </template>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            calledDevice: "8103",
+            meetMode: "video", //视频会商使用video
+          });
+          const form2 = ref({
+            meetID: "",
+            mixType: 1,
+          });
+          const formRef = ref(null);
+          const formRef2 = ref(null);
+          const eventData = ref();
+          const data = ref([]);
+          const rules = ref({
+            calledDevice: [
+              {
+                required: true,
+                message: "请输入被叫号码",
+                trigger: "blur",
+              },
+            ],
+          });
+          const rules2 = ref({
+            meetID: [
+              {
+                required: true,
+                message: "请输入会议ID",
+                trigger: "blur",
+              },
+            ],
+            mixType: [
+              {
+                required: true,
+                message: "请选择混码类型",
+                trigger: "blur",
+              },
+            ],
+            sources: [
+              {
+                required: true,
+                message: "请选择混码源",
+                trigger: "blur",
+              },
+            ],
+          });
+          const mixTypes = [1, 2, 4, 6, 8, 9, 13, 16];
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const meetData = ref(null);
+          const mixRtspStream = ref(null);
+          const userRtspStream = ref(null);
+
+          /**
+           * 提交表单
+           */
+          const handleSubmit = () => {
+            formRef.value.validate((valid, fields) => {
+              if (valid) {
+                DispRTC.client.callSessions
+                  .joinMeetCall(form.value)
+                  .then((res) => {
+                    ElementPlus.ElMessage({
+                      type: "success",
+                      message: "调用加入会议接口成功",
+                      showClose: true,
+                    });
+                  })
+                  .catch((err) => {
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          /**
+           * 获取会议详细信息
+           */
+          const getMeetDetail = () => {
+            formRef2.value.validateField("meetID", (valid, fields) => {
+              if (valid) {
+                DispRTC.client.conferenceRoom
+                  .getMeetDetail({ meetID: form2.value.meetID })
+                  .then((res) => {
+                    console.log("getMeetDetail success", res.data);
+                    meetData.value = res.data;
+                  })
+                  .catch((err) => {
+                    data.value = [];
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+          /**
+           * 获取会议成员
+           */
+          const listMeetMember = () => {
+            formRef2.value.validateField("meetID", (valid, fields) => {
+              if (valid) {
+                DispRTC.client.conferenceRoom
+                  .listMeetMember({ meetID: form2.value.meetID })
+                  .then((res) => {
+                    data.value = res.data.list;
+                  })
+                  .catch((err) => {
+                    data.value = [];
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          /**
+           * 混码
+           */
+          const handleMix = (item) => {
+            formRef2.value.validate((valid, fields) => {
+              if (valid) {
+                const data = {
+                  meetID: form2.value.meetID,
+                  mixType: form2.value.mixType,
+                  sourceInfo: form2.value.sources.map((e) => {
+                    return {
+                      calledDevice: e,
+                    };
+                  }),
+                };
+                while (data.sourceInfo.length < data.mixType) {
+                  data.sourceInfo.push({});
+                }
+                if (data.sourceInfo.length > data.mixType) {
+                  data.sourceInfo = data.sourceInfo.splice(0, data.mixType);
+                }
+                DispRTC.client.conferenceRoom
+                  .startMeetVideoMix(data)
+                  .then((res) => {
+                    //混码接口调用成功，第一次需要播放混码区视频
+                    !mixRtspStream.value && playMixVideo();
+                  })
+                  .catch((err) => {
+                    data.value = [];
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          /**
+           * 播放成员视频
+           */
+          const handleUserVideo = (user) => {
+            //只有一个窗口，先退出后播放
+            if (userRtspStream.value) {
+              userRtspStream.value.stop();
+              userRtspStream.value = null;
+            }
+            //获取通话rtspURL
+            DispRTC.client.videoSessions
+              .getVideoPhoneRtspUrl({
+                calledDevice: user.activeDevice,
+                userID: user.userID,
+              })
+              .then((res) => {
+                //播放成员视频
+                let rtspStream = (userRtspStream.value =
+                  DispRTC.createRTSPStream({
+                    rtspUrl: res.data.rtspUrl,
+                    remoteVideo: document.getElementById(`user_video`),
+                    callback: handlePlayEvent,
+                  }));
+                rtspStream
+                  .play()
+                  .then((res) => {
+                    console.log("打开播放通道成功 rtspStream.play", res);
+                  })
+                  .catch((err) => {
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: "播放成员视频失败",
+                      showClose: true,
+                    });
+                    userRtspStream.value = null;
+                    rtspStream.stop();
+                    console.error("播放失败 rtspStream.play", err, rtspStream);
+                  });
+              })
+              .catch((err) => {
+                console.error("获取通话rtspURL err", err);
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: "获取通话rtspURL失败",
+                  showClose: true,
+                });
+              });
+          };
+
+          //播放混码区视频
+          const playMixVideo = () => {
+            if (!meetData.value) {
+              return ElementPlus.ElMessage({
+                type: "warning",
+                message: "请先获取会议详情",
+                showClose: true,
+              });
+            }
+            let rtspStream = (mixRtspStream.value = DispRTC.createRTSPStream({
+              rtspUrl: meetData.value.rtspUrl,
+              remoteVideo: document.getElementById(`mix_video`),
+              callback: handlePlayEvent,
+            }));
+            rtspStream
+              .play()
+              .then((res) => {
+                console.log("打开播放通道成功 rtspStream.play", res);
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: "播放混码区视频失败",
+                  showClose: true,
+                });
+                mixRtspStream.value = null;
+                rtspStream.stop();
+                console.error("播放失败 rtspStream.play", err, rtspStream);
+              });
+          };
+
+          /**
+           * 处理播放回调事件
+           *
+           * @param {Object} data
+           * @param {RTSPStream} rtsptream
+           */
+          const handlePlayEvent = (data, rtsptream) => {
+            // console.error("handlePlayEvent", data, rtsptream);
+            if (data.event === "open") {
+              console.log("播放视频成功", data);
+            } else {
+              if (data.event === "close") {
+                console.log("视频关闭", data);
+              } else {
+                console.error("播放视频失败", data);
+              }
+              if (data.elementId === "mix_video") {
+                mixRtspStream.value = null;
+                mixRtspStream.stop();
+              } else if (rtsptream === userRtspStream.value) {
+                userRtspStream.value = null;
+                userRtspStream.stop();
+              }
+            }
+          };
+
+          //结束会议
+          const handleEndMeet = () => {
+            //踢出所有人员，关闭会议
+            formRef2.value.validateField("meetID", (valid, fields) => {
+              if (valid) {
+                DispRTC.client.conferenceRoom
+                  .kickMeet({ meetID: form2.value.meetID })
+                  .then((res) => {})
+                  .catch((err) => {
+                    data.value = [];
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          const handleAnswer = () => {
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                if ([403, 480].includes(data.code)) {
+                  //清除本地缓存
+                  localStorage.removeItem("DispRTC-token");
+                }
+                break;
+              case "MeetMemberEvent_Add": //会议成员事件-新增
+                //因为meetID不是手动输入的，这里监听会议成员获取会议ID,查询时就不用手动输入了
+                if (data.activeDevice === form.value.calledDevice) {
+                  form2.value.meetID = data.meetID;
+                }
+              case "MeetMemberEvent_Del": //会议成员事件-删除
+                break;
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  //主叫号码，这里自动接听
+                  handleAnswer();
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            formRef,
+            rules,
+            handleSubmit,
+            eventData,
+            data,
+            handleAnswer,
+            isNewCall,
+            form2,
+            formRef2,
+            rules2,
+            listMeetMember,
+            handleMix,
+            mixTypes,
+            getMeetDetail,
+            handleUserVideo,
+            handleEndMeet,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

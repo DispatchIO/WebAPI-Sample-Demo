@@ -233,10 +233,14 @@
      * @returns
      */
     static aesEncrypt(message, key = "000000") {
-      return CryptoJS.AES.encrypt(message, CryptoJS.enc.Utf8.parse(key), {
-        mode: CryptoJS.mode.ECB,
-        padding: CryptoJS.pad.Pkcs7,
-      }).toString();
+      return CryptoJS.AES.encrypt(
+        CryptoJS.enc.Utf8.parse(message),
+        CryptoJS.enc.Utf8.parse(key),
+        {
+          mode: CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7,
+        }
+      ).toString();
     }
 
     /**
@@ -246,7 +250,10 @@
      * @returns
      */
     static aesDecrypt(message, key = "000000") {
-      return CryptoJS.AES.decrypt(message, key).toString(CryptoJS.enc.Utf8);
+      return CryptoJS.AES.decrypt(message, CryptoJS.enc.Utf8.parse(key), {
+        mode: CryptoJS.mode.ECB,
+        padding: CryptoJS.pad.Pkcs7,
+      }).toString(CryptoJS.enc.Utf8);
     }
 
     /**
@@ -265,7 +272,7 @@
     static sign(str, key = "") {
       let secretKey = "" + key;
       if (secretKey.length > 16) {
-        secretKey = secretKey.substring(secretKey.length - 16);
+        secretKey = secretKey.substring(0, 16);
       }
       while (secretKey.length < 16) {
         secretKey = "0" + secretKey;
@@ -580,7 +587,7 @@
    */
   const DuplexMode = {
     FULL: "full", //全双工
-    HALF: "hakf", //半双工
+    HALF: "half", //半双工
   };
 
   /**
@@ -940,9 +947,6 @@
       this.called = null;
       this.requestTel = null;
 
-      // 容器集合
-      this.videoLocalMap = new Map();
-      this.videoRemoteMap = new Map();
       //录音
       this.mediaRecorder = null;
       this.recordedBlobs = [];
@@ -1296,7 +1300,7 @@
     takeSnapshot() {
       if (!this.localStream) return R.toReject(ErrCode.DEVICE_NOT_OPEN);
 
-      const track = mediaStream.getVideoTracks()[0];
+      const track = this.localStream.getVideoTracks()[0];
       const imageCapture = new ImageCapture(track);
       imageCapture
         .takePhoto()
@@ -1309,7 +1313,7 @@
             .toLocaleDateString()
             .replaceAll("/", "-")}-${new Date()
             .toLocaleTimeString()
-            .replaceAll(":", "-")}-${t("screenshot")}.png`;
+            .replaceAll(":", "-")}-screenshot.png`;
           document.body.appendChild(a);
           a.click();
           setTimeout(() => {
@@ -1361,7 +1365,7 @@
       if (this.mediaRecorder) {
         this.mediaRecorder.stop();
 
-        if (this.mediaRecorder.length > 0) {
+        if (this.mediaRecorder) {
           const mimeType = getSupportedMimeType().split(";", 1)[0];
           const blob = new Blob(this.recordedBlobs, { type: mimeType });
           const url = window.URL.createObjectURL(blob);
@@ -1402,7 +1406,8 @@
       }
 
       stream.getTracks().forEach((track) => {
-        this.PC && this.PC.addTrack(track, stream);
+        this.webrtcStackNode.PC &&
+          this.webrtcStackNode.PC.addTrack(track, stream);
       });
 
       stream.getVideoTracks()[0].addEventListener("ended", () => {
@@ -1428,7 +1433,7 @@
           codecs.splice(selectedCodecIndex, 1);
           codecs.unshift(selectedCodec);
 
-          const transceiver = this.PC.getTransceivers().find(
+          const transceiver = this.webrtcStackNode.PC.getTransceivers().find(
             (t) => t.sender && t.sender.track === stream.getVideoTracks()[0]
           );
           if (transceiver) {
@@ -1519,8 +1524,8 @@
       } else if (callType === CALL_TYPE.VIDEO) {
         this.callType = "audio/video";
         hasVideo = true;
-        remote = RTCStream.videoRemote;
-        local = RTCStream.videoLocal;
+        remote = this.videoRemote;
+        local = this.videoLocal;
       } else {
         return false;
       }
@@ -1600,7 +1605,7 @@
      * @param {*} param0
      * @returns
      */
-    sipAnswer({ videoRemote, videoLocal, mudle, callType } = {}) {
+    sipAnswer({ videoRemote, videoLocal, callType } = {}) {
       if (this.webrtcStackNode == null) {
         return false;
       }
@@ -1616,10 +1621,6 @@
           videoRemote instanceof HTMLElement
             ? videoRemote
             : document.getElementById(videoRemote);
-        if (mudle) {
-          this.videoLocalMap.set(mudle, videoLocal);
-          this.videoRemoteMap.set(mudle, videoRemote);
-        }
         this.webrtcStackNode.answer(
           videoLocal || this.videoLocal,
           videoRemote || this.videoRemote || RTCStream.audioRemote
@@ -1660,31 +1661,6 @@
 
       this.webrtcStackNode.dtmf();
       return true;
-    }
-
-    /**
-     * 播放video
-     */
-    playVideo(mudle) {
-      try {
-        if (mudle) {
-          if (this.videoLocalMap.has(mudle)) {
-            this.videoLocalMap.get(mudle).play();
-            this.videoLocalMap.get(mudle).muted = true;
-          }
-          this.videoLocalMap.get(mudle) && this.videoLocalMap.get(mudle).play();
-          this.videoRemoteMap.get(mudle) &&
-            this.videoRemoteMap.get(mudle).play();
-        } else {
-          if (this.videoLocal) {
-            this.videoLocal.play();
-            this.videoLocal.muted = true;
-          }
-          this.videoRemote && this.videoRemote.play();
-        }
-      } catch (error) {
-        RTCStream.LOG.error("playVideo", error);
-      }
     }
 
     getCallType() {
@@ -1818,9 +1794,7 @@
       this.remoteSdp = null;
       this.setRemoteSdp = false;
 
-      this.ringbacktone = new Audio(
-        "/demo/html/webrtc/sounds/ringbacktone.wav"
-      );
+      this.ringbacktone = new Audio("./sounds/ringbacktone.wav");
       this.ringbacktone.autoplay = false;
       this.ringbacktone.loop = true;
       this.ringbacktone.muted = true;
@@ -1828,7 +1802,7 @@
         this.ringbacktone.muted = false;
       });
 
-      this.ringtone = new Audio("/demo/html/webrtc/sounds/ringtone.wav");
+      this.ringtone = new Audio("./sounds/ringtone.wav");
       this.ringtone.autoplay = false;
       this.ringtone.loop = true;
       this.ringtone.muted = true;
@@ -2729,7 +2703,7 @@
         .toLocaleDateString()
         .replaceAll("/", "-")}-${new Date()
         .toLocaleTimeString()
-        .replaceAll(":", "-")}-${t("screenshot")}.png`;
+        .replaceAll(":", "-")}-screenshot.png`;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
@@ -2895,7 +2869,7 @@
                   self
                 );
               }
-              self.close();
+              self.stop();
               RTCStream.LOG.info(
                 "onicecandidateEvent 播放失败",
                 res.data.reason
@@ -2923,7 +2897,7 @@
               },
               self
             );
-            self.close();
+            self.stop();
           });
       }
     }
@@ -3193,6 +3167,13 @@
                 let meet = res.data.list.find(
                   (m) => m.meetMode === meetMode && m.isSystem === YesOrNo.YES
                 );
+                if (!meet) {
+                  meet = res.data.list.find(
+                    (m) =>
+                      m.meetMode === MeetMode.AUDIO &&
+                      m.isSystem === YesOrNo.YES
+                  );
+                }
                 if (meet) {
                   meetID = meet.meetID;
                 }
@@ -4200,7 +4181,7 @@
       }
       callingDevice ??= this.meetingCalling.get(meetID);
       if (!callingDevice) {
-        callingDevice = this.client.callSessionss._getAvailableTel(true);
+        callingDevice = this.client.callSessions._getAvailableTel(true);
         if (!callingDevice)
           return Promise.reject(R.err("手柄离线或不可用，请检查", 6001));
         this.meetingCalling.set(meetID, callingDevice);
@@ -4405,6 +4386,7 @@
      * @returns
      */
     openVideo({ videoID } = {}) {
+      console.error("openVideo", videoID);
       if (Util.isEmpty(videoID)) return Promise.reject(R.err("监控ID不能为空"));
       return Api.VideoSessions.openVideo({ videoID });
     }
@@ -4647,7 +4629,11 @@
      * @returns
      */
     setGroup({ event, smsGroupName, smsGroupID, smsContacts } = {}) {
-      if (Util.hasEmpty(event, smsGroupName))
+      if (Util.hasEmpty(event)) return Promise.reject(R.err("参数缺失"));
+      if (
+        (event === "smsGroupAdd" || event === "smsGroupMod") &&
+        isEmpty(smsGroupName)
+      )
         return Promise.reject(R.err("参数缺失"));
       return Api.SmsSessions.setGroup({
         event,
@@ -5545,7 +5531,10 @@
           "".concat(e, ": ").concat(t)
         );
       case "NotReadableError":
-        return new Err(ErrCode.NOT_READABLE, "".concat(e, ": ").concat(t));
+        return new Err(
+          ErrCode.DEVICES_NOT_READABLE,
+          "".concat(e, ": ").concat(t)
+        );
       case "InvalidStateError":
       case "NotAllowedError":
       case "PERMISSION_DENIED":
@@ -6173,7 +6162,7 @@
       this.token = options.token || Store.get("token"); //登录后token
       this.singleSignOn = options.singleSignOn ?? false; //是否为单点登录
       this.keepalive = options.keepalive ?? true;
-      this.registerSoftphone = options.registerSoftphone ?? true;
+      this.registerSoftphone = options.registerSoftphone ?? true; //是否注册软电话
       this.reLogin = this.keepalive !== false; //是否重登录
 
       this.isReLogining = false; //是否正在重登录
@@ -6434,7 +6423,16 @@
       }
       return this;
     }
-
+    /**
+     * 移除单次事件
+     * @param {String} name 事件名称
+     */
+    offOnce(name) {
+      if (name) {
+        delete this.onceEventMap[name];
+      }
+      return this;
+    }
     /**
      * 清楚所有事件
      */
@@ -7014,7 +7012,6 @@
      */
     async destroy() {
       if (Util.isNotEmpty(this.client)) {
-        this.client.reLogin = false;
         Util.isNotEmpty(this.client.wsClient) && this.client.wsClient.close();
         if (Util.isNotEmpty(this.client.token)) {
           try {
@@ -7026,11 +7023,10 @@
         }
       }
 
-      Store.clear();
+      console.warn("销毁Client客户端");
 
       RTCStream.destroy();
-
-      console.warn("销毁Client客户端");
+      Store.clear();
 
       return R.ok();
     }

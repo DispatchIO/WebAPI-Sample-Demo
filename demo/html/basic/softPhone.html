@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>软电话注册 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          软电话注册
+        </div>
+
+        <div
+          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center"
+        >
+          <el-form
+            ref="formRef"
+            :model="form"
+            label-width="auto"
+            :rules="rules"
+            class="w-1/2"
+          >
+            <el-form-item prop="phone" label="注册号码">
+              <el-input v-model="form.phone" />
+            </el-form-item>
+            <el-form-item prop="password" label="密码">
+              <el-input v-model="form.password" />
+            </el-form-item>
+            <el-form-item prop="enabled" label="是否注册">
+              <el-select v-model="form.enabled">
+                <el-option
+                  v-for="item in [0,1]"
+                  :key="item"
+                  :label="item === 0 ?'否':'是'"
+                  :value="item"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button @click="handleRegister">确定</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({});
+          const formRef = ref(null);
+          const rules = ref({
+            phone: [
+              {
+                required: true,
+                message: "请输入注册号码",
+                trigger: "blur",
+              },
+            ],
+            password: [
+              {
+                required: true,
+                message: "请输入密码",
+                trigger: "blur",
+              },
+            ],
+          });
+
+          const operatorInfo = ref({});
+
+          /**
+           * 注册
+           */
+          const handleRegister = () => {
+            formRef.value.validate((valid, fields) => {
+              if (valid) {
+                DispRTC.client
+                  .setSoftPhoneConfig(form.value)
+                  .then((res) => {
+                    ElementPlus.ElMessage.closeAll();
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: "注册成功",
+                    });
+                  })
+                  .catch((err) => {
+                    console.error("软电话配置失败", err);
+                    ElementPlus.ElMessage.closeAll();
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: "软电话注册成功",
+                    });
+                  });
+              }
+            });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            if (eventType === "LoginStatus") {
+              ElementPlus.ElMessage.closeAll();
+              ElementPlus.ElMessage({
+                type: "warning",
+                message: data.msg,
+              });
+              if ([403, 480].includes(data.code)) {
+                //清除本地缓存
+                localStorage.removeItem("DispRTC-token");
+              }
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          const init = async () => {
+            subscribeEvent();
+            operatorInfo.value = await DispRTC.client.getOperatorInfo();
+            await DispRTC.client
+              .listSoftPhoneConfig()
+              .then((res) => {
+                console.log("listSoftPhoneConfig", res);
+                if (res.data.list.length > 0) {
+                  form.value = res.data.list[0];
+                } else {
+                  form.value = {
+                    phone: operatorInfo.value.mainTel,
+                    enabled: 1,
+                    phoneType: "0",
+                    password: "1",
+                    operatorID: operatorInfo.value?.operatorID,
+                  };
+                }
+              })
+              .catch((err) => {});
+          };
+
+          onBeforeMount(() => {
+            init();
+          });
+
+          return {
+            form,
+            rules,
+            formRef,
+            handleRegister,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+
+  <!-- <script>
+    cc.getOperatorInfo().then(function (msg) {
+      $("#left_phone").text(msg.data.mainTel);
+      $("#phones").append("<option>" + msg.data.mainTel + "<option>");
+    });
+
+    $("#user_info_btn").click(function () {
+      if (rtcStream.password != null) {
+        $("#left_phone_password").val(rtcStream.password);
+      }
+    });
+
+    $("#sub").click(function () {
+      rtcStream.setRegisterProfile(
+        $("#left_phone").text(),
+        $("#left_phone_password").val()
+      );
+      rtcStream.init();
+      $("#user_info").modal("toggle");
+    });
+    // 监听呼入状态
+    rtcStream.on("on_new_call", (msg) => {
+      $("#call_answer").attr("disabled", false);
+    });
+
+    // 监听挂断状态
+    rtcStream.on("on_hangup", (msg) => {
+      $("#call_answer").attr("disabled", true);
+    });
+
+    // 接听
+    $("#call_answer").click(function () {
+      rtcStream.sipAnswer(null, null);
+    });
+  </script> -->
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>创建会议 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          创建会议
+        </div>
+
+        <div
+          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="10" class="px-2">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              :rules="rules"
+              class="w-full"
+            >
+              <el-form-item prop="meetName" label="会议名称">
+                <el-input v-model="form.meetName"></el-input>
+              </el-form-item>
+              <el-form-item prop="meetMode" label="会议类型">
+                <el-select v-model="form.meetMode">
+                  <el-option label="语音会议" value="audio"></el-option>
+                  <el-option label="视频会议" value="video"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="isAllowSpeak" label="默认发言">
+                <el-select v-model="form.isAllowSpeak">
+                  <el-option label="是" value="yes"></el-option>
+                  <el-option label="否" value="no"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="callinState" label="呼入会议">
+                <el-select v-model="form.callinState">
+                  <el-option label="是" :value="1"></el-option>
+                  <el-option label="否" :value="0"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item
+                v-if="form.callinState == 'yes'"
+                prop="callinNum"
+                label="呼入号码"
+              >
+                <el-input v-model="form.callinNum"></el-input>
+              </el-form-item>
+              <el-form-item
+                v-if="form.callinState == 'yes'"
+                prop="callinPwd"
+                label="呼入密码"
+              >
+                <el-input v-model="form.callinPwd"></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button @click="handleAdd" type="primary">创建</el-button>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="14" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="10" />
+            </div>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            meetMode: "audio",
+            isAllowSpeak: "yes",
+            callinState: 0,
+          });
+          const formRef = ref(null);
+          const eventData = ref();
+          const rules = ref({
+            meetName: [
+              {
+                required: true,
+                message: "请输入会议名称",
+                trigger: "blur",
+              },
+            ],
+            meetMode: [
+              {
+                required: true,
+                message: "请选择会议类型",
+                trigger: "blur",
+              },
+            ],
+            isAllowSpeak: [
+              {
+                required: true,
+                message: "请选择默认发言",
+                trigger: "blur",
+              },
+            ],
+            callinState: [
+              {
+                required: true,
+                message: "请选择呼入会议",
+                trigger: "blur",
+              },
+            ],
+            callinNum: [
+              {
+                required: true,
+                message: "请输入呼入号码",
+                trigger: "blur",
+              },
+            ],
+            callinPwd: [
+              {
+                required: true,
+                message: "请输入呼入密码",
+                trigger: "blur",
+              },
+            ],
+          });
+
+          /**
+           * 创建
+           */
+          const handleAdd = () => {
+            formRef.value.validate((valid, fields) => {
+              if (valid) {
+                DispRTC.client.conferenceRoom
+                  .createMeet(form.value)
+                  .then((res) => {
+                    ElementPlus.ElMessage({
+                      type: "success",
+                      message: "创建会议成功",
+                      showClose: true,
+                    });
+                  })
+                  .catch((err) => {
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                if ([403, 480].includes(data.code)) {
+                  //清除本地缓存
+                  localStorage.removeItem("DispRTC-token");
+                }
+                break;
+              case "MeetStatusEvent_Add": //会议信息事件-新增
+              case "MeetStatusEvent_Mod": //会议信息事件-修改
+              case "MeetStatusEvent_Del": //会议信息事件-删除
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            formRef,
+            rules,
+            handleAdd,
+            eventData,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>
