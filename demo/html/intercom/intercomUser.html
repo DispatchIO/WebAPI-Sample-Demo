@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>获取对讲组 Dispatch WebSDK API</title>
+    <title>获取对讲号码 Dispatch WebSDK API</title>
 
     <link rel="stylesheet" href="../assets/styles/index.css" />
     <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
@@ -29,13 +29,17 @@
         <div
           class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
         >
-          获取对讲组
+          获取对讲号码
         </div>
 
         <div
           class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
         >
           <el-col :span="12" class="px-4">
+            <div class="text-red-500 mb-10">
+              注意：对讲号码在通讯录里面就是一个用户，用户号码的类型为集群群组(pocgroup)和集群号码(poc)的号码可以进行对讲。<br />
+              <br />
+            </div>
             <el-form
               ref="formRef"
               :model="form"
@@ -45,14 +49,8 @@
               <el-form-item prop="groupID" label="部门ID">
                 <el-input v-model="form.groupID" />
               </el-form-item>
-              <el-form-item prop="keyWord" label="部门名称">
+              <el-form-item prop="keyWord" label="名称和号码">
                 <el-input v-model="form.keyWord" />
-              </el-form-item>
-              <el-form-item prop="hasChild" label="是否获取子部门">
-                <el-select v-model="form.hasChild">
-                  <el-option label="是" :value="true"></el-option>
-                  <el-option label="否" :value="false"></el-option>
-                </el-select>
               </el-form-item>
               <el-form-item prop="beginIndex" label="分页起始行">
                 <el-input-number
@@ -73,24 +71,46 @@
               </el-form-item>
 
               <el-form-item>
-                <el-button @click="handleQuery" type="primary">查询</el-button>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button @click="handleQuery" type="primary">
+                      查询
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-col>
           <el-col :span="12" class="px-4">
             <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
-              <div class="w-1/2">
-                部门ID ----
-                <span class="text-red-500">总条数:{{ total }}</span>
-              </div>
-              <div class="w-1/4">部门名称</div>
-              <div class="w-1/4">部门类型</div>
+              <div class="w-1/2">用户姓名</div>
+              <div class="w-1/4">默认号码</div>
+              <div class="w-1/4">集群群组</div>
             </div>
-            <template v-for="item in groupData">
+            <template v-for="item in userData">
               <div class="flex items-center px-3">
-                <div class="w-1/2">{{ item.groupID }}</div>
-                <div class="w-1/4">{{ item.groupName }}</div>
-                <div class="w-1/4">{{ item.groupType }}</div>
+                <div class="w-1/2">{{ item.realName }}</div>
+                <div class="w-1/4">{{ item.defaultNo }}</div>
+                <div class="w-1/4">
+                  {{ item.deviceInfo.find((d) => d.deviceType === "pocgroup" ||
+                  d.deviceType === "poc").deviceTel }}
+                </div>
               </div>
             </template>
           </el-col>
@@ -104,21 +124,47 @@
       createApp({
         setup() {
           const form = ref({
-            groupID: "", //递归获取当前部门编号下所有部门列表
-            keyWord: "", //模糊匹配名称
-            hasChild: true, //是否递归获取所有子部门。默认为false，即只获取一级子部门
+            groupID: "", //部门编号，为空时查询所有用户
+            keyWord: "", //模糊匹配匹配名称，号码
             beginIndex: 0, //分页起始行
             count: 20, //页数量
           });
           const formRef = ref(null);
-          const groupData = ref([]);
+          const userData = ref([]);
           const total = ref(0);
+
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
 
           /**
            * 查询
            */
           const handleQuery = () => {
-            listGroup();
+            listUser();
           };
 
           //事件处理
@@ -144,12 +190,20 @@
                 //接听按钮
                 rtcStream.value = data.rtcStream;
                 isNewCall.value = true;
+                if (isSelf.value) {
+                  //自己呼出去的，这里自动接听
+                  handleAnswer();
+                } else {
+                  showAnwserBtn.value = true;
+                }
               } else if (
                 DispRTC.Types.RTCStreamEventType.ON_DISCONNECT === event.type ||
                 DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
               ) {
                 rtcStream.value = null;
                 isNewCall.value = false;
+                isSelf.value = false;
+                showAnwserBtn.value = false;
               }
             }
           };
@@ -159,13 +213,19 @@
             //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
             DispRTC.client.on("All", handleEvent);
           };
-          //获取部门列表
-          const listGroup = async () => {
+          //获取用户列表
+          const listUser = async () => {
             DispRTC.client.dataStorage
-              .groupSync(DispRTC.Types.DataAction.ACTION_LISTSUB, form.value)
+              .userSync(DispRTC.Types.DataAction.ACTION_LIST, form.value)
               .then((res) => {
-                groupData.value = res.data.list;
+                //过滤集群群组
+                userData.value = res.data.list.filter((e) => {
+                  return e.deviceInfo.some(
+                    (d) => d.deviceType === "pocgroup" || d.deviceType === "poc"
+                  );
+                });
                 total.value = res.data.total;
+                console.log("listUser userData.value", userData.value);
               })
               .catch((err) => {
                 ElementPlus.ElMessage({
@@ -173,7 +233,7 @@
                   message: err.msg,
                   showClose: true,
                 });
-                groupData.value = [];
+                userData.value = [];
                 total.value = 0;
               });
           };
@@ -186,8 +246,14 @@
             form,
             formRef,
             handleQuery,
-            groupData,
+            userData,
             total,
+            handleHangup,
+            handleAnswer,
+            isNewCall,
+            rtcStream,
+            isSelf,
+            showAnwserBtn,
           };
         },
       })

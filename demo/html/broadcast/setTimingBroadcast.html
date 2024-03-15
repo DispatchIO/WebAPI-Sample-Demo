@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>呼叫广播 Dispatch WebSDK API</title>
+    <title>定时广播 Dispatch WebSDK API</title>
 
     <link rel="stylesheet" href="../assets/styles/index.css" />
     <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
@@ -29,7 +29,7 @@
         <div
           class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
         >
-          呼叫广播
+          定时广播
         </div>
 
         <div
@@ -65,40 +65,7 @@
                   </el-form-item>
                 </el-col>
               </el-row>
-              <el-row :gutter="20">
-                <el-col :span="12">
-                  <el-form-item prop="callMode" label="广播模式">
-                    <el-select v-model="form.callMode">
-                      <el-option label="人工" value="manual"></el-option>
-                      <el-option label="文件" value="file"></el-option>
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item
-                    label="追呼次数"
-                    prop="callLoop"
-                    v-if="form.callMode === 'file'"
-                  >
-                    <el-autocomplete
-                      v-model.number="form.callLoop"
-                      :fetch-suggestions="querySearch"
-                    >
-                      <template #default="{ item }">
-                        <div class="flex-nowrap">
-                          <span class="value">{{ item.value }}</span>
-                          <span class="link ml-4">{{ item.label }}</span>
-                        </div>
-                      </template>
-                    </el-autocomplete>
-                  </el-form-item>
-                </el-col>
-              </el-row>
-              <el-form-item
-                v-if="form.callMode === 'file'"
-                prop="fileName"
-                label="广播文件"
-              >
+              <el-form-item prop="fileName" label="广播文件">
                 <div class="w-full flex flex-nowrap">
                   <el-input v-model="form.fileName" disabled></el-input>
                   <el-button class="ml-2" type="info" @click="handleOpenFile">
@@ -119,17 +86,73 @@
                   </el-upload>
                 </div>
               </el-form-item>
-
+              <el-row :gutter="20">
+                <el-col :span="8">
+                  <el-form-item prop="callMode" label="定时模式">
+                    <el-select v-model="form.callMode">
+                      <el-option label="按日期" value="once"></el-option>
+                      <el-option label="按周" value="looping"></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="追呼次数" prop="callLoop">
+                    <el-autocomplete
+                      v-model.number="form.callLoop"
+                      :fetch-suggestions="querySearch"
+                      popper-class="transfer-autocomplete-popper"
+                      class="commom-filter"
+                    >
+                      <template #default="{ item }">
+                        <div class="flex-nowrap">
+                          <span class="value">{{ item.value }}</span>
+                          <span class="link ml-4">{{ item.label }}</span>
+                        </div>
+                      </template>
+                    </el-autocomplete>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item> </el-form-item>
+                </el-col>
+              </el-row>
+              <el-form-item prop="date" label="广播日期">
+                <el-select
+                  v-if="form.callMode === 'looping'"
+                  v-model="form.date"
+                  multiple
+                  placeholder=""
+                >
+                  <el-option
+                    v-for="item in 7"
+                    :label="`星期${item}`"
+                    :value="item"
+                    :key="item"
+                  ></el-option>
+                </el-select>
+                <el-date-picker
+                  v-else
+                  v-model="form.date"
+                  type="daterange"
+                  range-separator="-"
+                  start-placeholder=""
+                  end-placeholder=""
+                  value-format="YYYYMMDD"
+                ></el-date-picker>
+              </el-form-item>
+              <el-form-item prop="time" label="广播时间">
+                <el-time-picker
+                  v-model="form.time"
+                  value-format="HHmmss"
+                  :clearable="false"
+                ></el-time-picker>
+              </el-form-item>
               <el-form-item>
                 <el-button type="primary" @click="handleSubmit">
-                  广播
+                  定时广播
                 </el-button>
-                <el-button
-                  type="danger"
-                  :disabled="!callSessionID"
-                  @click="handleEndBroadcastCall"
-                >
-                  结束广播
+                <el-button type="primary" @click="handleListBroadcastCall">
+                  获取定时广播列表
                 </el-button>
               </el-form-item>
             </el-form>
@@ -141,6 +164,33 @@
             <div class="flex mt-3">
               <el-input v-model="eventData" type="textarea" :rows="6" />
             </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              定时广播列表
+            </div>
+            <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+              <el-col :span="8">任务编号</el-col>
+              <el-col :span="6">日期</el-col>
+              <el-col :span="6">时间</el-col>
+              <el-col :span="4">操作</el-col>
+            </div>
+            <template v-for="item in data">
+              <div class="flex items-center px-3 py-1">
+                <el-col :span="10">{{ item.taskID }}</el-col>
+                <el-col :span="6">{{ item.date }}</el-col>
+                <el-col :span="6">{{ item.time }}</el-col>
+                <el-col :span="2">
+                  <el-button
+                    type="danger"
+                    size="small"
+                    @click="handleDelTimingBroadcast(item)"
+                  >
+                    删除
+                  </el-button>
+                </el-col>
+              </div>
+            </template>
           </el-col>
         </div>
       </div>
@@ -178,7 +228,7 @@
               { calledDevice: "", userID: "" },
             ],
             callLoop: 0,
-            callMode: "file",
+            callMode: "once",
           });
           const formRef = ref(null);
           const eventData = ref();
@@ -205,6 +255,20 @@
                 trigger: "blur",
               },
             ],
+            time: [
+              {
+                required: true,
+                message: "请选择广播时间",
+                trigger: "blur",
+              },
+            ],
+            date: [
+              {
+                required: true,
+                message: "请选择广播日期",
+                trigger: "blur",
+              },
+            ],
           });
           const rtcStream = ref(null);
           const isNewCall = ref(false);
@@ -212,7 +276,6 @@
           const showDialog = ref(false);
           const fileList = ref([]);
           const uploadRef = ref(null);
-          const callSessionID = ref(""); //呼叫ID
 
           const querySearch = (str, callback) => {
             callback([
@@ -281,14 +344,15 @@
               if (valid) {
                 let data = { ...form.value };
                 data.called = data.called.filter((e) => !!e.calledDevice);
+                data.date = data.date.join("|");
+                console.log("handleSubmit", data);
                 DispRTC.client.callSessions
-                  .broadcastCall(data)
+                  .setTimingBroadcast(data)
                   .then((res) => {
-                    console.log("broadcastCall", res.data);
-                    callSessionID.value = res.data.callSessionID;
+                    console.log("setTimingBroadcast", res.data);
                     ElementPlus.ElMessage({
                       type: "success",
-                      message: "调用广播接口成功",
+                      message: "调用定时广播接口成功",
                       showClose: true,
                     });
                   })
@@ -302,16 +366,33 @@
               }
             });
           };
-
-          //结束广播
-          const handleEndBroadcastCall = () => {
+          //删除定时广播
+          const handleDelTimingBroadcast = (item) => {
             DispRTC.client.callSessions
-              .endBroadcastCall({ callSessionID: callSessionID.value })
+              .delTimingBroadcast({ taskID: item.taskID })
               .then((res) => {
-                callSessionID.value = null;
+                console.log("delTimingBroadcast", res.data);
+                ElementPlus.ElMessage({
+                  type: "success",
+                  message: "删除定时广播成功",
+                  showClose: true,
+                });
+                handleListBroadcastCall();
               })
               .catch((err) => {
-                console.error("endBroadcastCall err", err);
+                console.error("delTimingBroadcast err", err);
+              });
+          };
+
+          //获取定时广播
+          const handleListBroadcastCall = () => {
+            DispRTC.client.callSessions
+              .getTimingBroadcast({ beginIndex: 0, count: 20 })
+              .then((res) => {
+                data.value = res.data.list;
+              })
+              .catch((err) => {
+                console.error("getTimingBroadcast err", err);
                 ElementPlus.ElMessage({
                   type: "warning",
                   message: err.msg,
@@ -402,8 +483,8 @@
             handleExceed,
             handleUpload,
             uploadRef,
-            handleEndBroadcastCall,
-            callSessionID,
+            handleListBroadcastCall,
+            handleDelTimingBroadcast,
           };
         },
       })

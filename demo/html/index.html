@@ -106,6 +106,14 @@
               ],
             },
             {
+              label: "对讲示例",
+              value: "intercom",
+              children: [
+                { label: "获取对讲号码", value: "intercomUser" },
+                { label: "对讲", value: "makeCall" },
+              ],
+            },
+            {
               label: "会议示例",
               value: "conference",
               children: [
@@ -125,7 +133,6 @@
 
                 // { label: "会议踢出", value: "conferenceroomKick" },
 
-                // { label: "打开视频监控", value: "openVideo" },
                 // { label: "云台控制", value: "ptzControl" },
 
                 // { label: "视频分发", value: "videoDispense" },
@@ -133,39 +140,50 @@
               ],
             },
             {
+              label: "视频监控示例",
+              value: "monitor",
+              children: [
+                { label: "监控查询", value: "video" },
+                { label: "打开视频监控", value: "openVideo" },
+              ],
+            },
+            {
               label: "广播示例",
               value: "broadcast",
-              children: [{ label: "呼叫广播", value: "broadcastCall" }],
-            },
-            {
-              label: "短信示例",
-              value: "sms",
               children: [
-                { label: "获取短信列表", value: "smsList" },
-                { label: "获取短信详细信息", value: "smsGet" },
-                { label: "短信发送", value: "smsSend" },
-                { label: "短信已读", value: "smsRead" },
+                { label: "呼叫广播", value: "broadcastCall" },
+                { label: "定时广播", value: "setTimingBroadcast" },
               ],
             },
-            {
-              label: "传真示例",
-              value: "fax",
-              children: [
-                { label: "获取传真列表", value: "faxList" },
-                { label: "获取传真详细信息", value: "faxGet" },
-                { label: "传真发送", value: "faxSend" },
-                { label: "传真已读", value: "faxRead" },
-              ],
-            },
-            {
-              label: "位置订阅示例",
-              value: "location",
-              children: [
-                { label: "定位位置订阅", value: "gpsSubscribe" },
-                { label: "获取最新位置信息", value: "gpsLast" },
-                { label: "获取历史位置信息", value: "gpsHistory" },
-              ],
-            },
+            // {
+            //   label: "短信示例",
+            //   value: "sms",
+            //   children: [
+            //     { label: "获取短信列表", value: "smsList" },
+            //     { label: "获取短信详细信息", value: "smsGet" },
+            //     { label: "短信发送", value: "smsSend" },
+            //     { label: "短信已读", value: "smsRead" },
+            //   ],
+            // },
+            // {
+            //   label: "传真示例",
+            //   value: "fax",
+            //   children: [
+            //     { label: "获取传真列表", value: "faxList" },
+            //     { label: "获取传真详细信息", value: "faxGet" },
+            //     { label: "传真发送", value: "faxSend" },
+            //     { label: "传真已读", value: "faxRead" },
+            //   ],
+            // },
+            // {
+            //   label: "位置订阅示例",
+            //   value: "location",
+            //   children: [
+            //     { label: "定位位置订阅", value: "gpsSubscribe" },
+            //     { label: "获取最新位置信息", value: "gpsLast" },
+            //     { label: "获取历史位置信息", value: "gpsHistory" },
+            //   ],
+            // },
             {
               label: "通讯录示例",
               value: "contact",
@@ -176,16 +194,16 @@
                 // { label: "用户维护", value: "customVideoSource" },
               ],
             },
-            {
-              label: "场景示例",
-              value: "scense",
-              children: [
-                { label: "一场会议", value: "customConferenceMultiCall" },
-                { label: "语音通知", value: "customBroadcastCall" },
-                { label: "短信通知", value: "customSmsNotify" },
-              ],
-            },
-            { label: "常见问题", value: "question", children: [] },
+            // {
+            //   label: "场景示例",
+            //   value: "scense",
+            //   children: [
+            //     { label: "一场会议", value: "customConferenceMultiCall" },
+            //     { label: "语音通知", value: "customBroadcastCall" },
+            //     { label: "短信通知", value: "customSmsNotify" },
+            //   ],
+            // },
+            // { label: "常见问题", value: "question", children: [] },
           ]);
 
           return {

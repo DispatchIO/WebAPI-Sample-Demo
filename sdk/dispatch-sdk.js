@@ -3618,7 +3618,7 @@
       if (Util.hasEmpty(called, callMode, fileName, callLoop, date, time))
         return Promise.reject("参数校验失败");
       return Util.isEmpty(taskID)
-        ? Api.CallSessions.timingbroadcast({
+        ? Api.CallSessions.addTimingBroadcast({
             called,
             callMode,
             fileName,
@@ -3928,7 +3928,7 @@
 
     /**
      * 获取主叫号码
-     * @param {Boolean} isMicro 是否为手咪
+     * @param {Boolean} isMicro 是否为手咪，现在软电话不区分手咪
      * @returns
      */
     _getAvailableTel(isMeeting = false, isMicro = false) {
@@ -3946,15 +3946,16 @@
         ? DeviceState.IDLE
         : this.client.telStatus[viceTel];
 
-      if (isMicro) {
-        if (mainTelType === HandType.HAND_MICROPHONE)
-          return mainStatus !== DeviceState.OFFLINE ? mainTel : null;
-        return Util.isEmpty(viceTel) ||
-          viceStatus === DeviceState.OFFLINE ||
-          viceTelType !== HandType.HAND_MICROPHONE
-          ? null
-          : viceTel;
-      }
+      // if (isMicro) {
+      //   if (mainTelType === HandType.HAND_MICROPHONE)
+      //     return mainStatus !== DeviceState.OFFLINE ? mainTel : null;
+      //   return Util.isEmpty(viceTel) ||
+      //     viceStatus === DeviceState.OFFLINE ||
+      //     viceTelType !== HandType.HAND_MICROPHONE
+      //     ? null
+      //     : viceTel;
+      // }
+
       if (Util.isEmpty(this.client.priorityTel)) {
         this.log.warn("_getAvailableTel isEmpty", this.client.priorityTel);
         if (Util.isEmpty(viceTel)) {

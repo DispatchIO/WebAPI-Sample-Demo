@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>监控查询 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          监控查询
+        </div>
+
+        <div
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="12" class="px-2">
+            <div class="text-red-500 mb-2">监控目录查询</div>
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              class="w-full"
+            >
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="groupID" label="上级目录ID">
+                    <el-input v-model="form.groupID" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item prop="keyWord" label="名称">
+                    <el-input v-model="form.keyWord" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="hasChild" label="是否获取子目录">
+                    <el-select v-model="form.hasChild" placeholder="">
+                      <el-option label="是" :value="true"></el-option>
+                      <el-option label="否" :value="false"></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item prop="beginIndex" label="分页起始行">
+                    <el-input-number
+                      v-model="form.beginIndex"
+                      :min="0"
+                      :precision="0"
+                      step-strictly
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="count" label="页数量">
+                    <el-input-number
+                      v-model="form.count"
+                      :min="10"
+                      :precision="0"
+                      :step="10"
+                      step-strictly
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item>
+                <el-button type="primary" @click="handleQuery">
+                  查询监控目录
+                </el-button>
+              </el-form-item>
+            </el-form>
+            <div class="text-red-500 mb-2 mt-8">监控节点查询</div>
+            <el-form
+              ref="formRef"
+              :model="form2"
+              label-width="auto"
+              class="w-full"
+            >
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="groupID" label="目录ID">
+                    <el-input v-model="form2.groupID" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item prop="keyWord" label="名称/IP/编号">
+                    <el-input v-model="form2.keyWord" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="beginIndex" label="分页起始行">
+                    <el-input-number
+                      v-model="form2.beginIndex"
+                      :min="0"
+                      :precision="0"
+                      step-strictly
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item prop="count" label="页数量">
+                    <el-input-number
+                      v-model="form2.count"
+                      :min="10"
+                      :precision="0"
+                      :step="10"
+                      step-strictly
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item>
+                <el-button type="primary" @click="handleQueryMonitor">
+                  查询监控节点
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="12" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="6" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              监控目录列表
+            </div>
+            <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+              <el-col :span="12">
+                目录ID ----
+                <span class="text-red-500">总条数:{{ total }}</span>
+              </el-col>
+              <el-col :span="12">名称</el-col>
+            </div>
+            <template v-for="item in groupData">
+              <div class="flex items-center px-3 py-1">
+                <el-col :span="12">{{ item.groupID }}</el-col>
+                <el-col :span="12">{{ item.groupName }}</el-col>
+              </div>
+            </template>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              监控节点列表
+            </div>
+            <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+              <el-col :span="12"> 节点ID </el-col>
+              <el-col :span="12">名称</el-col>
+            </div>
+            <template v-for="item in monitorData">
+              <div class="flex items-center px-3 py-1">
+                <el-col :span="12">{{ item.videoID }}</el-col>
+                <el-col :span="12">{{ item.videoName }}</el-col>
+              </div>
+            </template>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            groupID: "", //递归获取当前部门编号下所有部门列表
+            keyWord: "", //模糊匹配名称
+            hasChild: true, //是否递归获取所有子部门。默认为false，即只获取一级子部门
+            beginIndex: 0, //分页起始行
+            count: 20, //页数量
+          });
+          const form2 = ref({
+            groupID: "", //监控目录编号，为空时查询所有监控节点
+            keyWord: "", //模糊匹配名称，ip，设备编号
+            beginIndex: 0, //分页起始行
+            count: 20, //页数量
+          });
+          const formRef = ref(null);
+          const eventData = ref();
+          const groupData = ref([]);
+          const total = ref(0);
+          const monitorData = ref([]);
+
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+
+          /**
+           * 查询监控目录
+           */
+          const handleQuery = () => {
+            DispRTC.client.dataStorage
+              .videoGroupSync(
+                DispRTC.Types.DataAction.ACTION_LISTSUB,
+                form.value
+              )
+              .then((res) => {
+                groupData.value = res.data.list;
+                total.value = res.data.total;
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                groupData.value = [];
+                total.value = 0;
+              });
+          };
+
+          //查询监控节点
+          const handleQueryMonitor = () => {
+            DispRTC.client.dataStorage
+              .videoSync(DispRTC.Types.DataAction.ACTION_LIST, form2.value)
+              .then((res) => {
+                monitorData.value = res.data.list;
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                monitorData.value = [];
+              });
+          };
+
+          const handleAnswer = () => {
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                if ([403, 480].includes(data.code)) {
+                  //清除本地缓存
+                  localStorage.removeItem("DispRTC-token");
+                }
+                break;
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  //主叫号码，这里自动接听
+                  handleAnswer();
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            formRef,
+            handleQuery,
+            eventData,
+            groupData,
+            total,
+            handleAnswer,
+            isNewCall,
+            monitorData,
+            form2,
+            handleQueryMonitor,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

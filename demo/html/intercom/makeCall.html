@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>对讲 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          对讲
+        </div>
+
+        <div
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center"
+        >
+          <el-col :span="12" class="px-2">
+            <div class="text-red-500 mb-6">
+              说明：对讲就是半双工呼叫。<br />
+              获取对讲号码/群组信息采用号码去查询用户，实际使用中是通过通讯录选择用户，可以拿个用ID去获取用户信息。
+            </div>
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              :rules="rules"
+            >
+              <el-form-item prop="calledDevice" label="被叫号码/群组">
+                <el-input v-model="form.calledDevice" />
+              </el-form-item>
+              <el-form-item prop="callType" label="呼叫类型">
+                <el-select v-model="form.callType" disabled>
+                  <el-option label="视频呼叫" value="video" />
+                  <el-option label="语音呼叫" value="audio" />
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="duplexMode" label="呼叫模式">
+                <el-select v-model="form.duplexMode" disabled>
+                  <el-option label="全双工" value="full" />
+                  <el-option label="半双工" value="half" />
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="userID" label="用户ID">
+                <el-input v-model="form.userID" />
+              </el-form-item>
+
+              <el-form-item>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div class="">
+                    <el-button @click="handleCall" type="primary"
+                      >呼叫</el-button
+                    >
+                    <el-button
+                      type="success"
+                      :disabled="!isNewCall || !pttRequest"
+                      @click="handleRequest"
+                    >
+                      抢权
+                    </el-button>
+                    <el-button
+                      type="danger"
+                      :disabled="!pttRequestSuccess"
+                      @click="handleRelease"
+                    >
+                      放权
+                    </el-button>
+                    <el-button type="info" @click="handleGetInfo">
+                      获取对讲号码/群组信息
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="12" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="6" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              对讲组信息
+            </div>
+            <el-input v-model="pocData" type="textarea" :rows="10"></el-input>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            calledDevice: "",
+            callType: "audio",
+            duplexMode: "half",
+          });
+          const formRef = ref(null);
+          const rules = ref({
+            calledDevice: [
+              {
+                required: true,
+                message: "请输入被叫号码/群组",
+                trigger: "blur",
+              },
+            ],
+          });
+          const eventData = ref();
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const pttRequest = ref(true); //是否可以抢权
+          const pttRequestSuccess = ref(false); //抢权成功
+          const pocData = ref("");
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          /**
+           * 呼叫
+           */
+          const handleCall = () => {
+            formRef.value.validate((valid, fields) => {
+              if (valid) {
+                isSelf.value = true;
+                DispRTC.client.callSessions
+                  .makeCall(form.value)
+                  .catch((err) => {
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                    isSelf.value = false;
+                  });
+              }
+            });
+          };
+          //获取对讲组信息
+          const handleGetInfo = () => {
+            //通过ID获取用户详细信息接口
+            // DispRTC.client.dataStorage.userSync(DataAction.ACTION_GET, {employeeID: form.value.userID});
+
+            DispRTC.client.dataStorage
+              .userSync(DispRTC.Types.DataAction.ACTION_LIST, {
+                keyWord: form.value.calledDevice,
+              })
+              .then((res) => {
+                console.log("handleGetInfo", res.data);
+                let pocList = res.data.list.filter((e) =>
+                  e.deviceInfo.some(
+                    (d) => d.deviceType === "pocgroup" || d.deviceType === "poc"
+                  )
+                );
+                pocData.value =
+                  pocList.length > 0 ? JSON.stringify(pocList[0]) : "";
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                pocData.value = "";
+              });
+          };
+          //抢权
+          const handleRequest = () => {
+            rtcStream.value.sipRequest();
+          };
+          //放权
+          const handleRelease = () => {
+            rtcStream.value.sipRelease();
+            pttRequestSuccess.value = false;
+          };
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+            if (eventType === "LoginStatus") {
+              ElementPlus.ElMessage.closeAll();
+              ElementPlus.ElMessage({
+                type: "warning",
+                message: data.msg,
+              });
+              if ([403, 480].includes(data.code)) {
+                //清除本地缓存
+                localStorage.removeItem("DispRTC-token");
+              }
+            } else if (
+              DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT === eventType
+            ) {
+              const event = data.event;
+              const type = event.type;
+              switch (type) {
+                //来电
+                case DispRTC.Types.RTCStreamEventType.ON_NEW_CALL:
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
+                  break;
+                case DispRTC.Types.RTCStreamEventType.ON_DISCONNECT:
+                case DispRTC.Types.RTCStreamEventType.ON_HANGUP:
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
+                  break;
+                //自己抢权事件
+                case DispRTC.Types.RTCStreamEventType.PTT_REQUEST:
+                  //抢权成功
+                  if (event.result === true) {
+                    pttRequestSuccess.value = true;
+                    ElementPlus.ElMessage({
+                      type: "success",
+                      message: "抢权成功",
+                    });
+                  } else {
+                    pttRequestSuccess.value = false;
+                    ElementPlus.ElMessage({
+                      type: "success",
+                      message: "抢权失败",
+                    });
+                  }
+                  break;
+                //他人抢权事件
+                case DispRTC.Types.RTCStreamEventType.ON_PTT_REQUEST:
+                  pttRequest.value = false;
+                  break;
+                //他人放权事件
+                case DispRTC.Types.RTCStreamEventType.ON_PTT_RELEASE:
+                  pttRequest.value = true;
+                  break;
+              }
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            rules,
+            formRef,
+            handleCall,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleRequest,
+            handleRelease,
+            eventData,
+            pttRequest,
+            pttRequestSuccess,
+            pocData,
+            handleGetInfo,
+            handleHangup,
+            isSelf,
+            showAnwserBtn,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

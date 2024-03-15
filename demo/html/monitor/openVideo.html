@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>打开视频监控 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          打开视频监控
+        </div>
+
+        <div
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="12" class="px-2">
+            <div class="text-red-500 mb-10">
+              注意：播放监控有两种方式；<br />
+              方式一：通过rtsp直接打开； <br />
+              方式二：是通过调用openVideo方法获取rtsp,再打开,
+              此方式需要手动调用closeVideo方法关闭视频。<br />
+              两种方式的区别是：方式二的rtsp流地址可以在视频会商中混码显示，方式一的不可以；<br />
+              方式一节约服务器资源，在不需要混码的时，推荐使用方式一。
+            </div>
+            <div class="text-red-500 mb-2">查询监控节点</div>
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              class="w-full"
+            >
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="groupID" label="目录ID">
+                    <el-input v-model="form.groupID" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item prop="keyWord" label="名称/IP/编号">
+                    <el-input v-model="form.keyWord" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item prop="beginIndex" label="分页起始行">
+                    <el-input-number
+                      v-model="form.beginIndex"
+                      :min="0"
+                      :precision="0"
+                      step-strictly
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item prop="count" label="页数量">
+                    <el-input-number
+                      v-model="form.count"
+                      :min="10"
+                      :precision="0"
+                      :step="10"
+                      step-strictly
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item>
+                <el-button type="primary" @click="handleQueryMonitor">
+                  查询监控节点
+                </el-button>
+                <el-button type="danger" @click="closeVideo">
+                  关闭监控
+                </el-button>
+              </el-form-item>
+            </el-form>
+
+            <el-col class="mt-8" :span="16">
+              <div class="text-red-500">视频监控画面</div>
+              <video width="100%" id="monitor_video"></video>
+            </el-col>
+          </el-col>
+          <el-col :span="12" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="6" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              监控节点列表
+            </div>
+            <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+              <el-col :span="12"> 节点ID </el-col>
+              <el-col :span="6">名称</el-col>
+              <el-col :span="6">操作</el-col>
+            </div>
+            <template v-for="item in monitorData">
+              <div class="flex items-center px-3 py-1">
+                <el-col :span="12">{{ item.videoID }}</el-col>
+                <el-col :span="6">{{ item.videoName }}</el-col>
+                <el-col :span="6">
+                  <el-button type="success" @click="handleOpenMonitor(item, 1)">
+                    方式一
+                  </el-button>
+                  <el-button type="success" @click="handleOpenMonitor(item,2)">
+                    方式二
+                  </el-button>
+                </el-col>
+              </div>
+            </template>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            groupID: "", //监控目录编号，为空时查询所有监控节点
+            keyWord: "", //模糊匹配名称，ip，设备编号
+            beginIndex: 0, //分页起始行
+            count: 20, //页数量
+          });
+          const formRef = ref(null);
+          const eventData = ref();
+          const monitorData = ref([]);
+
+          const rtcStream = ref(null);
+          const rtspStream = ref(null);
+          const isNewCall = ref(false);
+          const playData = ref(null);
+
+          //打开监控
+          const handleOpenMonitor = (data, type) => {
+            //因为这里只有一个窗口，所以先关闭后再打开
+            closeVideo();
+            //方式一
+            if (type === 1) {
+              let rtspUrl = "rtsp://";
+              if (data.userName && data.userPwd)
+                rtspUrl += data.userName + ":" + data.userPwd + "@";
+              if (data.IPAddr && data.IPPort)
+                rtspUrl += data.IPAddr + ":" + data.IPPort;
+              if (data.puid) rtspUrl += "/" + data.puid;
+
+              console.log("方式一 rtspUrl", rtspUrl);
+
+              let stream = (rtspStream.value = DispRTC.createRTSPStream({
+                rtspUrl: rtspUrl,
+                remoteVideo: document.getElementById(`monitor_video`),
+                callback: handlePlayEvent,
+              }));
+              stream
+                .play()
+                .then((res) => {
+                  console.log("打开播放通道成功 rtspStream.play", res);
+                })
+                .catch((err) => {
+                  ElementPlus.ElMessage({
+                    type: "warning",
+                    message: "播放失败",
+                    showClose: true,
+                  });
+                  console.error("播放失败 rtspStream.play", err);
+                  closeVideo();
+                });
+            } else {
+              //方式二
+              DispRTC.client.videoSessions
+                .openVideo({ videoID: data.videoID })
+                .then((res) => {
+                  playData.value = res.data;
+
+                  console.log("方式二 rtspUrl", res.data.rtspUrl);
+
+                  let stream = (rtspStream.value = DispRTC.createRTSPStream({
+                    rtspUrl: res.data.rtspUrl,
+                    remoteVideo: document.getElementById(`monitor_video`),
+                    callback: handlePlayEvent,
+                  }));
+
+                  stream
+                    .play()
+                    .then((res1) => {
+                      console.log("打开播放通道成功 rtspStream.play", res1);
+                    })
+                    .catch((err) => {
+                      ElementPlus.ElMessage({
+                        type: "warning",
+                        message: "播放失败",
+                        showClose: true,
+                      });
+                      console.error("播放失败 rtspStream.play", err);
+                      closeVideo();
+                    });
+                })
+                .catch((err) => {
+                  console.error("openVideo", err);
+                  ElementPlus.ElMessage({
+                    type: "warning",
+                    message: err.msg,
+                    showClose: true,
+                  });
+                });
+            }
+          };
+
+          //关闭视频
+          const closeVideo = () => {
+            if (playData.value) {
+              playData.value.flowID &&
+                DispRTC.client.videoSessions
+                  .closeVideo({ flowID: playData.value.flowID })
+                  .catch((err) => {});
+              playData.value = null;
+            }
+            if (rtspStream.value) {
+              rtspStream.value.stop();
+              rtspStream.value = null;
+            }
+          };
+
+          /**
+           * 处理播放回调事件
+           *
+           * @param {any} data
+           * @param {RTSPStream} rtsptream
+           */
+          const handlePlayEvent = (data, rtsptream) => {
+            if (data.event === "open") {
+              console.log("打开摄像头成功", JSON.stringify(data));
+            } else {
+              if (data.event === "close") {
+                console.log("摄像头关闭", JSON.stringify(data));
+              } else {
+                console.error("打开摄像头失败", JSON.stringify(data));
+              }
+              if (rtsptream === rtcStream.value) {
+                closeVideo();
+              }
+            }
+          };
+
+          //查询监控节点
+          const handleQueryMonitor = () => {
+            DispRTC.client.dataStorage
+              .videoSync(DispRTC.Types.DataAction.ACTION_LIST, form.value)
+              .then((res) => {
+                monitorData.value = res.data.list;
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                monitorData.value = [];
+              });
+          };
+
+          const handleAnswer = () => {
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                if ([403, 480].includes(data.code)) {
+                  //清除本地缓存
+                  localStorage.removeItem("DispRTC-token");
+                }
+                break;
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  //主叫号码，这里自动接听
+                  handleAnswer();
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            form,
+            formRef,
+            eventData,
+            handleAnswer,
+            isNewCall,
+            monitorData,
+            handleQueryMonitor,
+            handleOpenMonitor,
+            closeVideo,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>
