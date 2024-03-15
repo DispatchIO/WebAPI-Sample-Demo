@@ -1,145 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Dispatch WebSDK API</title>
     <script src="../assets/jquery-3.4.1.min.js"></script>
-    <script src="../../../sdk/dispatch-sdk.js"></script>
+    <script src="../sdk/dispatch-sdk.js"></script>
     <!-- <script src="https://120.26.125.181/js/dispatch-sdk.js"></script> -->
-    <link rel="stylesheet" href="./index.css">
+    <link rel="stylesheet" href="./index.css" />
     <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
-        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+      integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu"
+      crossorigin="anonymous"
+    />
 
     <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
-        integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
+      integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ"
+      crossorigin="anonymous"
+    />
 
     <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
-        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
-        crossorigin="anonymous"></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+      integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+      crossorigin="anonymous"
+    ></script>
 
-     <script src="../assets/jquery.cookie.js"></script>
-
+    <script src="../assets/jquery.cookie.js"></script>
 
     <!-- 导入axios依赖包-->
     <script src="../assets/axios.min.js"></script>
     <!-- cryptoJs 依赖包 -->
-   <script src="../assets/crypto-js.js"></script>
+    <script src="../assets/crypto-js.js"></script>
     <!-- socket.io依赖 -->
     <script src="../assets/socket.io.js"></script>
+  </head>
 
-</head>
-
-<body>
-
+  <body>
     <!--
 Create the banner at the top of the page.
 -->
     <div class="container-fluid banner">
-        <p class="banner-text">点名</p>
+      <p class="banner-text">点名</p>
     </div>
-
 
     <div class="container">
+      <div
+        class="alert alert-danger alert-dismissible"
+        id="alert_data"
+        role="alert"
+        hidden="false"
+      >
+        <button
+          type="button"
+          class="close"
+          data-dismiss="alert"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <strong id="alert_info"></strong>
+        <span id="alert_msg"></span>
+      </div>
 
-        <div class="alert alert-danger alert-dismissible" id="alert_data" role="alert" hidden="false">
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
-                    aria-hidden="true">&times;</span></button>
-            <strong id="alert_info"></strong>
-            <span id="alert_msg"></span>
+      <form id="join-form" class="form-horizontal">
+        <div class="form-group">
+          <label class="col-sm-2 control-label">点名类型</label>
+          <div class="col-sm-10">
+            <select class="form-control" id="rollCallType">
+              <option value="parallel">同时呼叫</option>
+              <option value="serial">顺序呼叫</option>
+            </select>
+          </div>
         </div>
 
-
-        <form id="join-form" class="form-horizontal">
-            <div class="form-group">
-                <label class="col-sm-2 control-label">点名类型</label>
-                <div class="col-sm-10">
-                    <select class="form-control" id="rollCallType">
-                        <option value="parallel">同时呼叫</option>
-                        <option value="serial">顺序呼叫</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="col-sm-2 control-label">点名用户号码</label>
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" id="called_device" placeholder="多号码输入,进行分割">
-                </div>
-            </div>
-            <div class="form-group">
-                <div class="col-sm-offset-2 col-sm-10">
-                    <button type="button" id="start_rollCall" class="btn btn-default">点名</button>
-                    <button type="button" id="stop_rollCall" class="btn btn-default">停止点名</button>
-
-                </div>
-            </div>
-
-        </form>
-
+        <div class="form-group">
+          <label class="col-sm-2 control-label">点名用户号码</label>
+          <div class="col-sm-10">
+            <input
+              type="text"
+              class="form-control"
+              id="called_device"
+              placeholder="多号码输入,进行分割"
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <button type="button" id="start_rollCall" class="btn btn-default">
+              点名
+            </button>
+            <button type="button" id="stop_rollCall" class="btn btn-default">
+              停止点名
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
+  </body>
+  <script src="../assets/config.js"></script>
 
-</body>
-<script src="../assets/config.js"></script>
-
-<script>
- 
+  <script>
     cc.getOperatorInfo().then(function (msg) {
-        $("#left_phone").text(msg.data.mainTel)
-        $("#phones").append('<option>' + msg.data.mainTel + '<option>')
-    })
+      $("#left_phone").text(msg.data.mainTel);
+      $("#phones").append("<option>" + msg.data.mainTel + "<option>");
+    });
 
     let callSessionID;
 
     $("#sub").click(function () {
-        rtcStream.setRegisterProfile($("#left_phone").text(), $("#left_phone_password").val())
-        rtcStream.init()
-        $('#user_info').modal('toggle');
-
-    })
+      rtcStream.setRegisterProfile(
+        $("#left_phone").text(),
+        $("#left_phone_password").val()
+      );
+      rtcStream.init();
+      $("#user_info").modal("toggle");
+    });
     // 监听呼入状态
     rtcStream.on("on_new_call", (msg) => {
-
-        $("#call_answer").attr("disabled", false)
-
+      $("#call_answer").attr("disabled", false);
     });
 
     // 监听挂断状态
     rtcStream.on("on_hangup", (msg) => {
-        $("#call_answer").attr("disabled", true)
-        $("#call_hold").attr("disabled", true)
-
+      $("#call_answer").attr("disabled", true);
+      $("#call_hold").attr("disabled", true);
     });
 
     // 点名按钮
     $("#start_rollCall").click(function () {
+      let called = new Array();
+      for (const i of $("#called_device").val().split(",")) {
+        called.push({ calledDevice: i });
+      }
 
-        let called = new Array();
-        for (const i of $("#called_device").val().split(",")) {
-            called.push({"calledDevice":i})
-        }
-
-        cc.callSession.rollCall({ "called":called, "callMode": $("#rollCallType").val()}).then(function (msg) {
-            callSessionID = msg.data.callSessionID;
-            console.log(msg);
-        })
-    })
+      cc.callSession
+        .rollCall({ called: called, callMode: $("#rollCallType").val() })
+        .then(function (msg) {
+          callSessionID = msg.data.callSessionID;
+          console.log(msg);
+        });
+    });
 
     $("#stop_rollCall").click(function () {
-        console.log(callSessionID);
-        cc.callSession.endRollCall(callSessionID).then(function (msg) {
-            console.log(msg);
-        })
-    })
-
-
-
-
-</script>
-
+      console.log(callSessionID);
+      cc.callSession.endRollCall(callSessionID).then(function (msg) {
+        console.log(msg);
+      });
+    });
+  </script>
 </html>
