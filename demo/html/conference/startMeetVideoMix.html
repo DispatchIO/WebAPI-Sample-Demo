@@ -52,16 +52,27 @@
               </el-form-item>
 
               <el-form-item>
-                <el-button @click="handleSubmit" type="primary">
-                  加入会议
-                </el-button>
-                <!-- <el-button
-                  type="success"
-                  :disabled="!isNewCall"
-                  @click="handleAnswer"
-                >
-                  接听
-                </el-button> -->
+                <div class="w-full flex flex-nowrap justify-between">
+                  <el-button @click="handleSubmit" type="primary">
+                    加入会议
+                  </el-button>
+                  <div class="ml-8">
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
             <div class="text-red-500 mb-2 pt-2">
@@ -230,11 +241,36 @@
             ],
           });
           const mixTypes = [1, 2, 4, 6, 8, 9, 13, 16];
-          const rtcStream = ref(null);
-          const isNewCall = ref(false);
           const meetData = ref(null);
           const mixRtspStream = ref(null);
           const userRtspStream = ref(null);
+
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
 
           /**
            * 提交表单
@@ -242,6 +278,7 @@
           const handleSubmit = () => {
             formRef.value.validate((valid, fields) => {
               if (valid) {
+                isSelf.value = true;
                 DispRTC.client.callSessions
                   .joinMeetCall(form.value)
                   .then((res) => {
@@ -252,6 +289,7 @@
                     });
                   })
                   .catch((err) => {
+                    isSelf.value = false;
                     ElementPlus.ElMessage({
                       type: "warning",
                       message: err.msg,
@@ -473,13 +511,6 @@
             });
           };
 
-          const handleAnswer = () => {
-            rtcStream.value.sipAnswer({
-              callType:
-                rtcStream.value.callType === "audio/video" ? "video" : "audio",
-            });
-          };
-
           //事件处理
           const handleEvent = ({ data, eventType }) => {
             console.log("handleEvent", eventType, data);
@@ -493,8 +524,7 @@
                   message: data.msg,
                 });
                 if ([403, 480].includes(data.code)) {
-                  //清除本地缓存
-                  localStorage.removeItem("DispRTC-token");
+                  goToLogin();
                 }
                 break;
               case "MeetMemberEvent_Add": //会议成员事件-新增
@@ -513,8 +543,12 @@
                   //接听按钮
                   rtcStream.value = data.rtcStream;
                   isNewCall.value = true;
-                  //主叫号码，这里自动接听
-                  handleAnswer();
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
                 } else if (
                   DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
                     event.type ||
@@ -522,6 +556,8 @@
                 ) {
                   rtcStream.value = null;
                   isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
                 }
                 break;
             }
@@ -544,8 +580,6 @@
             handleSubmit,
             eventData,
             data,
-            handleAnswer,
-            isNewCall,
             form2,
             formRef2,
             rules2,
@@ -555,6 +589,12 @@
             getMeetDetail,
             handleUserVideo,
             handleEndMeet,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            isSelf,
+            showAnwserBtn,
           };
         },
       })

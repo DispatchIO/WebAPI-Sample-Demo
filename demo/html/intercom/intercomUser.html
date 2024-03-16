@@ -33,10 +33,10 @@
         </div>
 
         <div
-          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
         >
           <el-col :span="12" class="px-4">
-            <div class="text-red-500 mb-10">
+            <div class="text-red-500 mb-4">
               注意：对讲号码在通讯录里面就是一个用户，用户号码的类型为集群群组(pocgroup)和集群号码(poc)的号码可以进行对讲。<br />
               <br />
             </div>
@@ -99,6 +99,14 @@
           </el-col>
           <el-col :span="12" class="px-4">
             <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="10" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 mt-4 text-white"
+            >
               <div class="w-1/2">用户姓名</div>
               <div class="w-1/4">默认号码</div>
               <div class="w-1/4">集群群组</div>
@@ -123,6 +131,7 @@
 
       createApp({
         setup() {
+          const eventData = ref();
           const form = ref({
             groupID: "", //部门编号，为空时查询所有用户
             keyWord: "", //模糊匹配匹配名称，号码
@@ -133,10 +142,11 @@
           const userData = ref([]);
           const total = ref(0);
 
-          const isSelf = ref(false); //自己呼出去的
-          const showAnwserBtn = ref(false); //显示来电按钮
+          //软电话相关
           const rtcStream = ref(null);
           const isNewCall = ref(false);
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
 
           //接听
           const handleAnswer = () => {
@@ -146,7 +156,6 @@
                 rtcStream.value.callType === "audio/video" ? "video" : "audio",
             });
           };
-
           //挂断
           const handleHangup = () => {
             //没有使用软电话是可以使用
@@ -170,41 +179,47 @@
           //事件处理
           const handleEvent = ({ data, eventType }) => {
             console.log("handleEvent", eventType, data);
-            if (eventType === "LoginStatus") {
-              ElementPlus.ElMessage.closeAll();
-              ElementPlus.ElMessage({
-                type: "warning",
-                message: data.msg,
-              });
-              if ([403, 480].includes(data.code)) {
-                isLogin.value = false;
-                //清除本地缓存
-                localStorage.removeItem("DispRTC-token");
-              }
-            } else if (
-              DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT === eventType
-            ) {
-              const event = data.event;
-              //来电
-              if (DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type) {
-                //接听按钮
-                rtcStream.value = data.rtcStream;
-                isNewCall.value = true;
-                if (isSelf.value) {
-                  //自己呼出去的，这里自动接听
-                  handleAnswer();
-                } else {
-                  showAnwserBtn.value = true;
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  goToLogin();
                 }
-              } else if (
-                DispRTC.Types.RTCStreamEventType.ON_DISCONNECT === event.type ||
-                DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
-              ) {
-                rtcStream.value = null;
-                isNewCall.value = false;
-                isSelf.value = false;
-                showAnwserBtn.value = false;
-              }
+                break;
+              // 软电话事件
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
+                }
+                break;
             }
           };
 
@@ -243,6 +258,7 @@
           });
 
           return {
+            eventData,
             form,
             formRef,
             handleQuery,

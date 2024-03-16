@@ -39,15 +39,29 @@
             监听所有事件
           </div>
           <div class="h-10 flex items-center px-4 text-sm">
-            使用DispRTC.EventType.ALL状态进行监听，更多事件请查看DispRTC.EventType
+            使用DispRTC.Types.EventType.ALL状态进监听所有事件，更多事件请查看DispRTC.Types.EventType
           </div>
-          <div class="w-full">
-            <el-button type="primary" @click="subscribeEvent"
-              >订阅事件</el-button
-            >
-            <el-button type="primary" @click="unSubscribeEvent"
-              >取消订阅事件</el-button
-            >
+          <div class="w-full flex flex-nowrap justify-between">
+            <div>
+              <el-button type="primary" @click="subscribeEvent"
+                >订阅事件</el-button
+              >
+              <el-button type="danger" @click="unSubscribeEvent"
+                >取消订阅事件</el-button
+              >
+            </div>
+            <div>
+              <el-button v-show="isNewCall" type="danger" @click="handleHangup">
+                挂断
+              </el-button>
+              <el-button
+                v-show="isNewCall && showAnwserBtn"
+                type="success"
+                @click="handleAnswer"
+              >
+                来电接听
+              </el-button>
+            </div>
           </div>
 
           <div class="w-full mt-6">
@@ -64,11 +78,69 @@
         setup() {
           const eventData = ref("");
 
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
+
           //事件处理
-          const handleEvent = (event) => {
-            const { data, eventType } = event;
+          const handleEvent = ({ data, eventType }) => {
             console.log("handleEvent", eventType, data);
-            eventData.value = JSON.stringify(event);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  goToLogin();
+                }
+                break;
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  showAnwserBtn.value = true;
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  showAnwserBtn.value = false;
+                }
+                break;
+            }
             if (eventType === "LoginStatus") {
               ElementPlus.ElMessage.closeAll();
               ElementPlus.ElMessage({
@@ -85,18 +157,27 @@
           // 订阅事件
           const subscribeEvent = () => {
             //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
-            DispRTC.client.on(DispRTC.EventType.ALL, handleEvent);
+            DispRTC.client.on(DispRTC.Types.EventType.ALL, handleEvent);
           };
 
           // 取消订阅事件
           const unSubscribeEvent = () => {
-            DispRTC.client.off(DispRTC.EventType.ALL, handleEvent);
+            DispRTC.client.off(DispRTC.Types.EventType.ALL, handleEvent);
           };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
 
           return {
             subscribeEvent,
             unSubscribeEvent,
             eventData,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            showAnwserBtn,
           };
         },
       })

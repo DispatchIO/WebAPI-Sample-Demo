@@ -37,39 +37,86 @@
         <div
           class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center"
         >
-          <el-form
-            ref="formRef"
-            :model="form"
-            label-width="auto"
-            :rules="rules"
-            class="w-1/2"
-          >
-            <el-form-item prop="username" label="用户名">
-              <el-input v-model="form.username" />
-            </el-form-item>
-            <el-form-item prop="password" label="密码">
-              <el-input v-model="form.password" />
-            </el-form-item>
+          <el-col :span="12" class="px-2">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              :rules="rules"
+            >
+              <el-form-item prop="username" label="用户名">
+                <el-input v-model="form.username" />
+              </el-form-item>
+              <el-form-item prop="password" label="密码">
+                <el-input v-model="form.password" />
+              </el-form-item>
 
-            <el-form-item>
-              <el-button :disabled="isLogin" @click="handleLogin"
-                >登录</el-button
-              >
-              <el-button :disabled="!isLogin" @click="quitClient"
-                >登出</el-button
-              >
-              <el-button :disabled="!isLogin" @click="handleDuty"
-                >{{isStartWork ? '关闭无人值守' : '开启无人值守'}}</el-button
-              >
-              <el-button :disabled="!isLogin" @click="handleOperatorInfo"
-                >查看个人信息</el-button
-              >
-            </el-form-item>
-
-            <el-form-item v-if="showInfo" label="个人信息">
+              <el-form-item>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button
+                      type="primary"
+                      :disabled="isLogin"
+                      @click="handleLogin"
+                    >
+                      登录
+                    </el-button>
+                    <el-button
+                      type="danger"
+                      :disabled="!isLogin"
+                      @click="quitClient"
+                    >
+                      登出
+                    </el-button>
+                    <el-button
+                      type="warning"
+                      :disabled="!isLogin"
+                      @click="handleDuty"
+                    >
+                      {{isStartWork ? '关闭无人值守' : '开启无人值守'}}
+                    </el-button>
+                    <el-button
+                      type="info"
+                      :disabled="!isLogin"
+                      @click="handleOperatorInfo"
+                    >
+                      查看个人信息
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="12" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="10" />
+            </div>
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              个人信息
+            </div>
+            <div class="flex mt-3">
               <el-input v-model="operatorInfo" type="textarea" :rows="10" />
-            </el-form-item>
-          </el-form>
+            </div>
+          </el-col>
         </div>
       </div>
     </div>
@@ -83,6 +130,7 @@
             username: "",
             password: "",
           });
+          const eventData = ref();
           const formRef = ref(null);
           const rules = ref({
             username: [
@@ -100,10 +148,36 @@
               },
             ],
           });
+
           const isLogin = ref(false);
           const isStartWork = ref(false);
           const showInfo = ref(false);
-          const operatorInfo = ref({});
+          const operatorInfo = ref();
+
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
 
           /**
            * 登录操作
@@ -115,12 +189,9 @@
                 DispRTC.client
                   .login(form.value.username, form.value.password)
                   .then((res) => {
-                    console.log(res);
                     isLogin.value = true;
-                    localStorage.setItem(
-                      "DispRTC-DEMO-token",
-                      res.data.access_token
-                    );
+                    const token = res.data.access_token;
+                    sendMsgToOpener({ type: "update_token", token });
                   })
                   .catch((err) => {
                     isLogin.value = false;
@@ -139,12 +210,12 @@
            * 退出客户端
            */
           function quitClient() {
-            localStorage.removeItem("DispRTC-token");
             DispRTC.destroy();
             isLogin.value = false;
+            sendMsgToOpener({ type: "update_token", token: "" });
           }
 
-          // 点击开启、关闭值班事件
+          // 点击开启、关闭值班事件,有事件上报AgentStatusEvent
           function handleDuty() {
             if (isStartWork.value) {
               DispRTC.client.stopWork();
@@ -165,17 +236,44 @@
           //事件处理
           const handleEvent = ({ data, eventType }) => {
             console.log("handleEvent", eventType, data);
-            if (eventType === "LoginStatus") {
-              ElementPlus.ElMessage.closeAll();
-              ElementPlus.ElMessage({
-                type: "warning",
-                message: data.msg,
-              });
-              if ([403, 480].includes(data.code)) {
-                isLogin.value = false;
-                //清除本地缓存
-                localStorage.removeItem("DispRTC-token");
-              }
+            eventData.value = JSON.stringify({ data, eventType });
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  isLogin.value = false;
+                  //清除本地缓存
+                  sendMsgToOpener({ type: "update_token", token: "" });
+                }
+                break;
+              // 调度员状态事件
+              case "AgentStatusEvent":
+                break;
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  showAnwserBtn.value = true;
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  showAnwserBtn.value = false;
+                }
+                break;
             }
           };
 
@@ -187,6 +285,7 @@
 
           onBeforeMount(() => {
             subscribeEvent();
+
             // 判断是否已经登录
             if (DispRTC.client._isLogin()) {
               isLogin.value = true;
@@ -198,6 +297,7 @@
           });
 
           return {
+            eventData,
             form,
             rules,
             formRef,
@@ -209,6 +309,11 @@
             showInfo,
             operatorInfo,
             handleOperatorInfo,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            showAnwserBtn,
           };
         },
       })

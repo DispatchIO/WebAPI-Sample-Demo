@@ -27,6 +27,7 @@
           class="w-40 fixed top-12"
           style="--el-anchor-font-size: 14.0006px"
         >
+          <el-anchor-link href="#desc"> DEMO说明 </el-anchor-link>
           <el-anchor-link
             v-for="item in anchors"
             :key="item.value"
@@ -37,6 +38,16 @@
         </el-anchor>
 
         <div class="flex1 w-full pl-52 pr-52 overflow-y-auto">
+          <div id="desc" class="text-red-500 mt-10 text-2xl">说明： <br /></div>
+          <div id="desc" class="text-red-500 text-sm mb-10">
+            1.
+            该SDK需依赖axios、crypto-js和socket.io，并且socket.io只能使用2.x版本。<br />
+            2.
+            使用软电话时，需要使用https协议；如使用http协议，则需要自行配置浏览器安全设置。比如edge需打开edge://flags/#unsafely-treat-insecure-origin-as-secure<br />
+            3.
+            该DEMO仅用于展示接口的使用，不能保证流程的完整性，操作不便的地方请忽略。该DEMO也不会对所有事件和状态进行处理。<br />
+            4. 为保证软电话的正常使用，示例窗口只能打开一个。<br />
+          </div>
           <template v-for="item in anchors" :key="item.value">
             <h1 :id="`${item.value}-demo`" class="text-4xl w-full my-6">
               {{item.label}}
@@ -50,14 +61,12 @@
                 <span class="text-xl">{{child.label}}</span>
 
                 <el-button class="absolute right-4 bottom-4" type="primary">
-                  <el-link
-                    class="text-white"
-                    :href="`./${item.value}/${child.value}.html`"
-                    :underline="false"
-                    target="_blank"
+                  <el-button
+                    type="primary"
+                    @click="handleOpen(`${item.value}/${child.value}.html`)"
                   >
                     立即测试
-                  </el-link>
+                  </el-button>
                 </el-button>
               </el-card>
             </div>
@@ -67,14 +76,10 @@
     </div>
 
     <script>
-      const { createApp, ref } = Vue;
+      const { createApp, ref, onMounted } = Vue;
 
       createApp({
         setup() {
-          console.error(
-            "DispRTC-token 211",
-            sessionStorage.getItem("DispRTC-token")
-          );
           const anchors = ref([
             {
               label: "基础示例",
@@ -119,7 +124,6 @@
               children: [
                 { label: "创建会议", value: "createMeet" },
                 { label: "获取会议列表", value: "listMeet" },
-                { label: "获取会议详细信息", value: "getMeetDetail" },
                 { label: "加入会议", value: "joinMeetCall" },
                 { label: "组呼", value: "groupCall" },
                 { label: "选呼", value: "selectCall" },
@@ -206,8 +210,43 @@
             // { label: "常见问题", value: "question", children: [] },
           ]);
 
+          /**
+           * 打开子窗口
+           *
+           */
+          const handleOpen = (name) => {
+            const token = sessionStorage.getItem("DispRTC-DEMO-token") || "";
+            window.open(
+              name +
+                "?token=" +
+                encodeURIComponent(token) +
+                "&name=" +
+                encodeURIComponent(name),
+              "DispRTC-DEMO-SUB-WINDOW"
+            );
+          };
+          /**
+           * 接收子窗口消息
+           */
+          const handleSubwindowMsg = ({ source, data }) => {
+            const { type } = data;
+            console.log("收到子窗口消息", type, data);
+            //需要登录
+            if (type === "login") {
+              sessionStorage.removeItem("DispRTC-DEMO-token");
+              handleOpen("basic/login.html");
+            } else if (type === "update_token") {
+              sessionStorage.setItem("DispRTC-DEMO-token", data.token);
+            }
+          };
+
+          onMounted(() => {
+            window.addEventListener("message", handleSubwindowMsg, false);
+          });
+
           return {
             anchors,
+            handleOpen,
           };
         },
       })

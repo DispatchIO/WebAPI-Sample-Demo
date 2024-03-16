@@ -33,7 +33,7 @@
         </div>
 
         <div
-          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
         >
           <el-col :span="10" class="px-2">
             <el-form
@@ -50,12 +50,32 @@
                 <el-input v-model="form.meetID"></el-input>
               </el-form-item>
               <el-form-item>
-                <el-button @click="handleListMeet" type="primary">
-                  获取会议列表
-                </el-button>
-                <el-button type="danger" @click="handleSubmit">
-                  删除会议
-                </el-button>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button @click="handleListMeet" type="primary">
+                      获取会议列表
+                    </el-button>
+                    <el-button type="danger" @click="handleSubmit">
+                      删除会议
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-col>
@@ -72,15 +92,13 @@
               会议成员
             </div>
             <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
-              <el-col :span="10">会议ID</el-col>
-              <el-col :span="7">会议编号</el-col>
-              <el-col :span="7">会议名称</el-col>
+              <el-col :span="16">会议ID</el-col>
+              <el-col :span="8">会议名称</el-col>
             </div>
             <template v-if="data" v-for="item in data">
               <div class="flex items-center px-3">
-                <el-col :span="10">{{ item.meetID }}</el-col>
-                <el-col :span="7">{{ item.meetNum }}</el-col>
-                <el-col :span="7">{{ item.meetName }}</el-col>
+                <el-col :span="16">{{ item.meetID }}</el-col>
+                <el-col :span="8">{{ item.meetName }}</el-col>
               </div>
             </template>
           </el-col>
@@ -108,6 +126,33 @@
               },
             ],
           });
+
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
 
           /**
            * 提交表单
@@ -167,17 +212,37 @@
                   type: "warning",
                   message: data.msg,
                 });
+                //403认证失败 480用户已在其他地方登录
                 if ([403, 480].includes(data.code)) {
-                  //清除本地缓存
-                  localStorage.removeItem("DispRTC-token");
+                  goToLogin();
                 }
                 break;
-              case "MeetMemberEvent_Add": //会议成员事件-新增
-                //因为meetID不是手动输入的，这里监听会议成员获取会议ID,查询时就不用手动输入了
-                if (data.activeDevice === form.value.calledDevice) {
-                  form2.value.meetID = data.meetID;
+              // 软电话事件
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
                 }
-              case "MeetMemberEvent_Del": //会议成员事件-删除
                 break;
             }
           };
@@ -200,6 +265,12 @@
             eventData,
             data,
             handleListMeet,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            isSelf,
+            showAnwserBtn,
           };
         },
       })

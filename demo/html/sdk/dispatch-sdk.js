@@ -1794,7 +1794,7 @@
       this.remoteSdp = null;
       this.setRemoteSdp = false;
 
-      this.ringbacktone = new Audio("./sounds/ringbacktone.wav");
+      this.ringbacktone = new Audio("../sounds/ringbacktone.wav");
       this.ringbacktone.autoplay = false;
       this.ringbacktone.loop = true;
       this.ringbacktone.muted = true;
@@ -1802,7 +1802,7 @@
         this.ringbacktone.muted = false;
       });
 
-      this.ringtone = new Audio("./sounds/ringtone.wav");
+      this.ringtone = new Audio("../sounds/ringtone.wav");
       this.ringtone.autoplay = false;
       this.ringtone.loop = true;
       this.ringtone.muted = true;

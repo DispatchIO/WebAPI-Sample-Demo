@@ -79,7 +79,29 @@
                 <el-input v-model="form.callinPwd"></el-input>
               </el-form-item>
               <el-form-item>
-                <el-button @click="handleAdd" type="primary">创建</el-button>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button @click="handleAdd" type="primary"
+                      >创建</el-button
+                    >
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-col>
@@ -152,6 +174,33 @@
             ],
           });
 
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
+
           /**
            * 创建
            */
@@ -190,14 +239,41 @@
                   type: "warning",
                   message: data.msg,
                 });
+                //403认证失败 480用户已在其他地方登录
                 if ([403, 480].includes(data.code)) {
-                  //清除本地缓存
-                  localStorage.removeItem("DispRTC-token");
+                  goToLogin();
                 }
                 break;
               case "MeetStatusEvent_Add": //会议信息事件-新增
               case "MeetStatusEvent_Mod": //会议信息事件-修改
               case "MeetStatusEvent_Del": //会议信息事件-删除
+                break;
+              // 软电话事件
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
+                }
                 break;
             }
           };
@@ -218,6 +294,12 @@
             rules,
             handleAdd,
             eventData,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            isSelf,
+            showAnwserBtn,
           };
         },
       })

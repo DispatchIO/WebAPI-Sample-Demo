@@ -33,9 +33,9 @@
         </div>
 
         <div
-          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
         >
-          <el-col :span="6" class="px-2">
+          <el-col :span="8" class="px-2">
             <el-form
               ref="formRef"
               :model="form"
@@ -67,25 +67,69 @@
               </el-form-item>
 
               <el-form-item>
-                <el-button @click="handleQuery" type="primary">查询</el-button>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button @click="handleQuery" type="primary"
+                      >查询</el-button
+                    >
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-col>
-          <el-col :span="18" class="px-2">
+          <el-col :span="16" class="px-2">
             <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex">
+              <el-input v-model="eventData" type="textarea" :rows="10" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 mt-4 text-white"
+            >
               <el-col :span="10">会议ID</el-col>
-              <el-col :span="5">会议编号</el-col>
-              <el-col :span="5">会议名称</el-col>
-              <el-col :span="4">会议类型</el-col>
+              <el-col :span="4">会议编号</el-col>
+              <el-col :span="4">会议名称</el-col>
+              <el-col :span="3">会议类型</el-col>
+              <el-col :span="3">操作</el-col>
             </div>
             <template v-for="item in meetData">
-              <div class="flex items-center px-3">
+              <div class="flex items-center px-3 my-1">
                 <el-col :span="10">{{ item.meetID }}</el-col>
-                <el-col :span="5">{{ item.meetNum }}</el-col>
-                <el-col :span="5">{{ item.meetName }}</el-col>
-                <el-col :span="4">{{ item.meetMode }}</el-col>
+                <el-col :span="4">{{ item.meetNum }}</el-col>
+                <el-col :span="4">{{ item.meetName }}</el-col>
+                <el-col :span="3">{{ item.meetMode }}</el-col>
+                <el-col :span="3">
+                  <el-button type="primary" @click="handleGetMeetDetail(item)">
+                    详细信息
+                  </el-button>
+                </el-col>
               </div>
             </template>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 mt-3 text-white"
+            >
+              会议详细信息
+            </div>
+            <div class="flex">
+              <el-input v-model="meetDetail" type="textarea" :rows="10" />
+            </div>
           </el-col>
         </div>
       </div>
@@ -96,59 +140,46 @@
 
       createApp({
         setup() {
+          const eventData = ref();
           const form = ref({
             beginIndex: 0, //分页起始行
             count: 20, //页数量
           });
           const formRef = ref(null);
           const meetData = ref([]);
+          const meetDetail = ref();
+
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
 
           /**
-           * 查询
+           * 获取会议列表
            */
           const handleQuery = () => {
-            listMeet();
-          };
-
-          //事件处理
-          const handleEvent = ({ data, eventType }) => {
-            console.log("handleEvent", eventType, data);
-            if (eventType === "LoginStatus") {
-              ElementPlus.ElMessage.closeAll();
-              ElementPlus.ElMessage({
-                type: "warning",
-                message: data.msg,
-              });
-              if ([403, 480].includes(data.code)) {
-                //清除本地缓存
-                localStorage.removeItem("DispRTC-token");
-              }
-            } else if (
-              DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT === eventType
-            ) {
-              const event = data.event;
-              //来电
-              if (DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type) {
-                //接听按钮
-                rtcStream.value = data.rtcStream;
-                isNewCall.value = true;
-              } else if (
-                DispRTC.Types.RTCStreamEventType.ON_DISCONNECT === event.type ||
-                DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
-              ) {
-                rtcStream.value = null;
-                isNewCall.value = false;
-              }
-            }
-          };
-
-          // 订阅事件
-          const subscribeEvent = () => {
-            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
-            DispRTC.client.on("All", handleEvent);
-          };
-          //获取会议列表
-          const listMeet = async () => {
             DispRTC.client.conferenceRoom
               .listMeet(form.value)
               .then((res) => {
@@ -165,15 +196,95 @@
               });
           };
 
+          //获取会议详细信息
+          const handleGetMeetDetail = (meet) => {
+            DispRTC.client.conferenceRoom
+              .getMeetDetail({ meetID: meet.meetID })
+              .then((res) => {
+                console.log("getMeetDetail", res.data);
+                meetDetail.value = JSON.stringify(res.data);
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                meetDetail.value = "";
+              });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  goToLogin();
+                }
+                break;
+              // 软电话事件
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
           onBeforeMount(() => {
             subscribeEvent();
           });
 
           return {
+            eventData,
             form,
             formRef,
             handleQuery,
             meetData,
+            meetDetail,
+            handleGetMeetDetail,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            isSelf,
+            showAnwserBtn,
           };
         },
       })

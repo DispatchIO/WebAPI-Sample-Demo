@@ -35,58 +35,67 @@
         <div
           class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex justify-center"
         >
-          <el-form
-            ref="formRef"
-            :model="form"
-            label-width="auto"
-            :rules="rules"
-            class="w-1/2"
-          >
-            <el-form-item prop="calledDevice" label="被叫号码">
-              <el-input v-model="form.calledDevice" />
-            </el-form-item>
-            <el-form-item prop="callType" label="呼叫类型">
-              <el-select v-model="form.callType" disabled>
-                <el-option label="视频呼叫" value="video" />
-                <el-option label="语音呼叫" value="audio" />
-              </el-select>
-            </el-form-item>
-            <el-form-item prop="duplexMode" label="呼叫模式">
-              <el-select v-model="form.duplexMode" disabled>
-                <el-option label="全双工" value="full" />
-                <el-option label="半双工" value="half" />
-              </el-select>
-            </el-form-item>
-            <el-form-item prop="userID" label="用户ID">
-              <el-input v-model="form.userID" />
-            </el-form-item>
+          <el-col :span="12" class="px-2">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              :rules="rules"
+            >
+              <el-form-item prop="calledDevice" label="被叫号码">
+                <el-input v-model="form.calledDevice" />
+              </el-form-item>
+              <el-form-item prop="callType" label="呼叫类型">
+                <el-select v-model="form.callType" disabled>
+                  <el-option label="视频呼叫" value="video" />
+                  <el-option label="语音呼叫" value="audio" />
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="duplexMode" label="呼叫模式">
+                <el-select v-model="form.duplexMode" disabled>
+                  <el-option label="全双工" value="full" />
+                  <el-option label="半双工" value="half" />
+                </el-select>
+              </el-form-item>
+              <el-form-item prop="userID" label="用户ID">
+                <el-input v-model="form.userID" />
+              </el-form-item>
 
-            <el-form-item>
-              <div class="w-full flex flex-nowrap justify-between">
-                <div>
-                  <el-button type="primary" @click="handleCall">
-                    语音呼叫
-                  </el-button>
+              <el-form-item>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button type="primary" @click="handleCall">
+                      语音呼叫
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
                 </div>
-                <div>
-                  <el-button
-                    v-show="isNewCall"
-                    type="danger"
-                    @click="handleHangup"
-                  >
-                    挂断
-                  </el-button>
-                  <el-button
-                    v-show="isNewCall && showAnwserBtn"
-                    type="success"
-                    @click="handleAnswer"
-                  >
-                    来电接听
-                  </el-button>
-                </div>
-              </div>
-            </el-form-item>
-          </el-form>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="12" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="10" />
+            </div>
+          </el-col>
         </div>
       </div>
     </div>
@@ -96,6 +105,7 @@
 
       createApp({
         setup() {
+          const eventData = ref();
           const form = ref({
             calledDevice: "",
             callType: "audio",
@@ -163,40 +173,47 @@
           //事件处理
           const handleEvent = ({ data, eventType }) => {
             console.log("handleEvent", eventType, data);
-            if (eventType === "LoginStatus") {
-              ElementPlus.ElMessage.closeAll();
-              ElementPlus.ElMessage({
-                type: "warning",
-                message: data.msg,
-              });
-              if ([403, 480].includes(data.code)) {
-                //清除本地缓存
-                localStorage.removeItem("DispRTC-token");
-              }
-            } else if (
-              DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT === eventType
-            ) {
-              const event = data.event;
-              //来电
-              if (DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type) {
-                //接听按钮
-                rtcStream.value = data.rtcStream;
-                isNewCall.value = true;
-                if (isSelf.value) {
-                  //自己呼出去的，这里自动接听
-                  handleAnswer();
-                } else {
-                  showAnwserBtn.value = true;
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  goToLogin();
                 }
-              } else if (
-                DispRTC.Types.RTCStreamEventType.ON_DISCONNECT === event.type ||
-                DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
-              ) {
-                rtcStream.value = null;
-                isNewCall.value = false;
-                isSelf.value = false;
-                showAnwserBtn.value = false;
-              }
+                break;
+              // 软电话事件
+              case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
+                const event = data.event;
+                //来电
+                if (
+                  DispRTC.Types.RTCStreamEventType.ON_NEW_CALL === event.type
+                ) {
+                  //接听按钮
+                  rtcStream.value = data.rtcStream;
+                  isNewCall.value = true;
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
+                } else if (
+                  DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
+                    event.type ||
+                  DispRTC.Types.RTCStreamEventType.ON_HANGUP === event.type
+                ) {
+                  rtcStream.value = null;
+                  isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
+                }
+                break;
             }
           };
 
@@ -211,6 +228,7 @@
           });
 
           return {
+            eventData,
             form,
             rules,
             formRef,

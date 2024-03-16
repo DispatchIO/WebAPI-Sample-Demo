@@ -121,16 +121,36 @@
               </el-form-item>
 
               <el-form-item>
-                <el-button type="primary" @click="handleSubmit">
-                  广播
-                </el-button>
-                <el-button
-                  type="danger"
-                  :disabled="!callSessionID"
-                  @click="handleEndBroadcastCall"
-                >
-                  结束广播
-                </el-button>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button type="primary" @click="handleSubmit">
+                      广播
+                    </el-button>
+                    <el-button
+                      type="danger"
+                      :disabled="!callSessionID"
+                      @click="handleEndBroadcastCall"
+                    >
+                      结束广播
+                    </el-button>
+                  </div>
+                  <div>
+                    <el-button
+                      v-show="isNewCall"
+                      type="danger"
+                      @click="handleHangup"
+                    >
+                      挂断
+                    </el-button>
+                    <el-button
+                      v-show="isNewCall && showAnwserBtn"
+                      type="success"
+                      @click="handleAnswer"
+                    >
+                      来电接听
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-col>
@@ -172,6 +192,7 @@
 
       createApp({
         setup() {
+          const eventData = ref();
           const form = ref({
             called: [
               { calledDevice: "", userID: "" },
@@ -181,7 +202,6 @@
             callMode: "file",
           });
           const formRef = ref(null);
-          const eventData = ref();
           const data = ref([]);
           const calledDeviceRules = ref([
             {
@@ -206,13 +226,38 @@
               },
             ],
           });
-          const rtcStream = ref(null);
-          const isNewCall = ref(false);
-          const meetData = ref(null);
+
           const showDialog = ref(false);
           const fileList = ref([]);
           const uploadRef = ref(null);
           const callSessionID = ref(""); //呼叫ID
+
+          //软电话相关
+          const rtcStream = ref(null);
+          const isNewCall = ref(false);
+          const isSelf = ref(false); //自己呼出去的
+          const showAnwserBtn = ref(false); //显示来电按钮
+
+          //接听
+          const handleAnswer = () => {
+            showAnwserBtn.value = false;
+            rtcStream.value.sipAnswer({
+              callType:
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
+            });
+          };
+          //挂断
+          const handleHangup = () => {
+            //没有使用软电话是可以使用
+            // DispRTC.client.callSessions.clearConnection({
+            //   calledDevice: form.value.calledDevice,
+            // });
+            rtcStream.value.sipHangUp();
+            isSelf.value = false;
+            isNewCall.value = false;
+            rtcStream.value = null;
+            showAnwserBtn.value = false;
+          };
 
           const querySearch = (str, callback) => {
             callback([
@@ -320,13 +365,6 @@
               });
           };
 
-          const handleAnswer = () => {
-            rtcStream.value.sipAnswer({
-              callType:
-                rtcStream.value.callType === "audio/video" ? "video" : "audio",
-            });
-          };
-
           //事件处理
           const handleEvent = ({ data, eventType }) => {
             console.log("handleEvent", eventType, data);
@@ -339,18 +377,12 @@
                   type: "warning",
                   message: data.msg,
                 });
+                //403认证失败 480用户已在其他地方登录
                 if ([403, 480].includes(data.code)) {
-                  //清除本地缓存
-                  localStorage.removeItem("DispRTC-token");
+                  goToLogin();
                 }
                 break;
-              case "MeetMemberEvent_Add": //会议成员事件-新增
-                //因为meetID不是手动输入的，这里监听会议成员获取会议ID,查询时就不用手动输入了
-                if (data.activeDevice === form.value.calledDevice) {
-                  form2.value.meetID = data.meetID;
-                }
-              case "MeetMemberEvent_Del": //会议成员事件-删除
-                break;
+              // 软电话事件
               case DispRTC.Types.EventType.RTC_STREAM_SESSION_EVENT:
                 const event = data.event;
                 //来电
@@ -360,8 +392,12 @@
                   //接听按钮
                   rtcStream.value = data.rtcStream;
                   isNewCall.value = true;
-                  //主叫号码，这里自动接听
-                  handleAnswer();
+                  if (isSelf.value) {
+                    //自己呼出去的，这里自动接听
+                    handleAnswer();
+                  } else {
+                    showAnwserBtn.value = true;
+                  }
                 } else if (
                   DispRTC.Types.RTCStreamEventType.ON_DISCONNECT ===
                     event.type ||
@@ -369,6 +405,8 @@
                 ) {
                   rtcStream.value = null;
                   isNewCall.value = false;
+                  isSelf.value = false;
+                  showAnwserBtn.value = false;
                 }
                 break;
             }
@@ -385,14 +423,12 @@
           });
 
           return {
+            eventData,
             form,
             formRef,
             rules,
             handleSubmit,
-            eventData,
             data,
-            handleAnswer,
-            isNewCall,
             querySearch,
             calledDeviceRules,
             showDialog,
@@ -404,6 +440,12 @@
             uploadRef,
             handleEndBroadcastCall,
             callSessionID,
+            isNewCall,
+            rtcStream,
+            handleAnswer,
+            handleHangup,
+            isSelf,
+            showAnwserBtn,
           };
         },
       })
