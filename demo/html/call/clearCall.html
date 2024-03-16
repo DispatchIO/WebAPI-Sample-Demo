@@ -133,10 +133,10 @@
           };
           //接听
           function handleAnswer() {
-            isVideo.value = rtcStream.callType === "audio/video";
+            isVideo.value = rtcStream.value.callType === "audio/video";
             rtcStream.value.sipAnswer({
               callType:
-                rtcStream.callType === "audio/video" ? "video" : "audio",
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
             });
             isAnswer.value = true;
           }

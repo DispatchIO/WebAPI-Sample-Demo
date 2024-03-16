@@ -79,7 +79,10 @@
 
       createApp({
         setup() {
-          const form = ref({});
+          const form = ref({
+            username: "ceshi02",
+            password: "FH2020",
+          });
           const formRef = ref(null);
           const rules = ref({
             username: [
@@ -115,7 +118,7 @@
                     console.log(res);
                     isLogin.value = true;
                     localStorage.setItem(
-                      "DispRTC-token",
+                      "DispRTC-DEMO-token",
                       res.data.access_token
                     );
                   })

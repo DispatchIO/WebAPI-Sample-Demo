@@ -6,7 +6,7 @@ var client = DispRTC.createClient({
   //直接本地打开sessionStorage中获取不到值，现在把他保存到localStorage中
   token: sessionStorage.getItem("DispRTC-token")
     ? JSON.parse(sessionStorage.getItem("DispRTC-token")).content
-    : localStorage.getItem("DispRTC-token"),
+    : localStorage.getItem("DispRTC-DEMO-token"),
 });
 
 // 手柄号

@@ -114,7 +114,7 @@
       createApp({
         setup() {
           const form = ref({
-            calledDevice: "",
+            calledDevice: "8103",
             callType: "video",
             duplexMode: "full",
           });
@@ -139,10 +139,16 @@
             showAnwserBtn.value = false;
             rtcStream.value.sipAnswer({
               callType:
-                rtcStream.callType === "audio/video" ? "video" : "audio",
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
               videoRemote: "remote_video",
               videoLocal: "local_video",
             });
+            console.log(
+              "handleAnswer",
+              rtcStream.value.callType === "audio/video" ? "video" : "audio",
+              document.getElementById("remote_video"),
+              document.getElementById("local_video")
+            );
           };
           //挂断
           const handleHangup = () => {

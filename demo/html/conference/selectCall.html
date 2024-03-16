@@ -159,7 +159,7 @@
           function handleAnswer() {
             rtcStream.value.sipAnswer({
               callType:
-                rtcStream.callType === "audio/video" ? "video" : "audio",
+                rtcStream.value.callType === "audio/video" ? "video" : "audio",
             });
           }
 

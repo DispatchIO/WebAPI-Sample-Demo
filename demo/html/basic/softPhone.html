@@ -144,11 +144,14 @@
 
           const init = async () => {
             subscribeEvent();
-            operatorInfo.value = await DispRTC.client.getOperatorInfo();
+            const res = await DispRTC.client.getOperatorInfo();
+            operatorInfo.value = res.data;
+
             await DispRTC.client
               .listSoftPhoneConfig()
               .then((res) => {
                 console.log("listSoftPhoneConfig", res);
+                console.log("operatorInfo", operatorInfo.value);
                 if (res.data.list.length > 0) {
                   form.value = res.data.list[0];
                 } else {
@@ -156,7 +159,7 @@
                     phone: operatorInfo.value.mainTel,
                     enabled: 1,
                     phoneType: "0",
-                    password: "1",
+                    password: "",
                     operatorID: operatorInfo.value?.operatorID,
                   };
                 }
@@ -180,40 +183,4 @@
         .mount("#app");
     </script>
   </body>
-
-  <!-- <script>
-    cc.getOperatorInfo().then(function (msg) {
-      $("#left_phone").text(msg.data.mainTel);
-      $("#phones").append("<option>" + msg.data.mainTel + "<option>");
-    });
-
-    $("#user_info_btn").click(function () {
-      if (rtcStream.password != null) {
-        $("#left_phone_password").val(rtcStream.password);
-      }
-    });
-
-    $("#sub").click(function () {
-      rtcStream.setRegisterProfile(
-        $("#left_phone").text(),
-        $("#left_phone_password").val()
-      );
-      rtcStream.init();
-      $("#user_info").modal("toggle");
-    });
-    // 监听呼入状态
-    rtcStream.on("on_new_call", (msg) => {
-      $("#call_answer").attr("disabled", false);
-    });
-
-    // 监听挂断状态
-    rtcStream.on("on_hangup", (msg) => {
-      $("#call_answer").attr("disabled", true);
-    });
-
-    // 接听
-    $("#call_answer").click(function () {
-      rtcStream.sipAnswer(null, null);
-    });
-  </script> -->
 </html>
