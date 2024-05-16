@@ -2525,9 +2525,10 @@
       this.PC = new RTCPeerConnection();
       this.Interval = null;
       this.Offer = null;
-      this.PC.onnegotiationneeded = (e) => this.handleNegotiationNeededEvent(e);
-      this.PC.onicecandidate = (e) => this.onicecandidateEvent(e);
-      this.PC.ontrack = (e) => this.ontrackEvent(e);
+      this.PC.onnegotiationneeded = (e) =>
+        this.handleNegotiationNeededEvent.call(this, e);
+      this.PC.onicecandidate = (e) => this.onicecandidateEvent.call(this, e);
+      this.PC.ontrack = (e) => this.ontrackEvent.call(this, e);
 
       //录音
       this.mediaRecorder = null;
