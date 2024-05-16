@@ -161,6 +161,7 @@ const toTts = (content) => {
   const data = Object.assign({ ...ttsConfig }, { text: content });
   return axios({
     url: `${serverAddr}/tts/api/v1`,
+    // url: "http://gxq.server.huiyan-tech.com:7200/api/v1",
     method: "post",
     headers: {
       "Content-Type": "application/json",

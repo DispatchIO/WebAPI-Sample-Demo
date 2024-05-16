@@ -1277,20 +1277,50 @@
     }
 
     /**
-     * 静音
+     * 静音 麦克风
      */
     mute() {
-      this.localStream &&
-        this.localStream.getAudioTracks().forEach((e) => (e.enabled = false));
+      this.webrtcStackNode &&
+        this.webrtcStackNode.localStream &&
+        this.webrtcStackNode.localStream
+          .getAudioTracks()
+          .forEach((e) => (e.enabled = false));
       return R.resolve();
     }
 
     /**
-     * 取消静音
+     * 取消静音 麦克风
      */
     unmute() {
-      this.localStream &&
-        this.localStream.getAudioTracks().forEach((e) => (e.enabled = true));
+      this.webrtcStackNode &&
+        this.webrtcStackNode.localStream &&
+        this.webrtcStackNode.localStream
+          .getAudioTracks()
+          .forEach((e) => (e.enabled = true));
+      return R.resolve();
+    }
+
+    /**
+     * 关闭摄像头
+     */
+    stopCamera() {
+      this.webrtcStackNode &&
+        this.webrtcStackNode.localStream &&
+        this.webrtcStackNode.localStream
+          .getVideoTracks()
+          .forEach((e) => (e.enabled = false));
+      return R.resolve();
+    }
+
+    /**
+     * 打开摄像头
+     */
+    openCamera() {
+      this.webrtcStackNode &&
+        this.webrtcStackNode.localStream &&
+        this.webrtcStackNode.localStream
+          .getVideoTracks()
+          .forEach((e) => (e.enabled = true));
       return R.resolve();
     }
 

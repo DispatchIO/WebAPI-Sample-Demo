@@ -27,7 +27,7 @@
     <div id="app">
       <div class="w-full h-full flex flex-col overflow-hidden">
         <div
-          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+          class="h-10 flex items-center px-0 text-white text-sm bg-[#52575c]"
         >
           视频呼叫
         </div>
@@ -67,6 +67,34 @@
                     <el-button type="primary" @click="handleCall">
                       视频呼叫
                     </el-button>
+                    <el-button
+                      :disabled="!rtcStream"
+                      type="danger"
+                      @click="handleMute"
+                    >
+                      静音
+                    </el-button>
+                    <el-button
+                      :disabled="!rtcStream"
+                      type="success"
+                      @click="handleUnmute"
+                    >
+                      取消静音
+                    </el-button>
+                    <el-button
+                      :disabled="!rtcStream"
+                      type="danger"
+                      @click="handleStopCamera"
+                    >
+                      关闭摄像头
+                    </el-button>
+                    <el-button
+                      :disabled="!rtcStream"
+                      type="success"
+                      @click="handleOpenCamera"
+                    >
+                      打开摄像头
+                    </el-button>
                   </div>
                   <div>
                     <el-button
@@ -85,6 +113,9 @@
                     </el-button>
                   </div>
                 </div>
+              </el-form-item>
+              <el-form-item label="说明">
+                静音、取消静音是关闭和打开麦克风；关闭摄像头和打开摄像头；两者分别使对方听不到声音、看不到图像
               </el-form-item>
 
               <div class="mt-6">
@@ -124,7 +155,7 @@
         setup() {
           const eventData = ref();
           const form = ref({
-            calledDevice: "",
+            calledDevice: "8102",
             callType: "video",
             duplexMode: "full",
           });
@@ -192,6 +223,19 @@
                   });
               }
             });
+          };
+
+          const handleMute = () => {
+            rtcStream.value.mute();
+          };
+          const handleUnmute = () => {
+            rtcStream.value.unmute();
+          };
+          const handleStopCamera = () => {
+            rtcStream.value.stopCamera();
+          };
+          const handleOpenCamera = () => {
+            rtcStream.value.openCamera();
           };
 
           //事件处理
@@ -263,6 +307,10 @@
             handleHangup,
             isSelf,
             showAnwserBtn,
+            handleMute,
+            handleUnmute,
+            handleStopCamera,
+            handleOpenCamera,
           };
         },
       })

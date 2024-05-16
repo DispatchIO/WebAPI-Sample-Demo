@@ -1,5 +1,6 @@
 // 服务器ip地址
 var serverAddr = "https://120.26.125.181";
+var ttsServer = "https://120.26.125.181/tts";
 
 /**
  * 子页面名称
