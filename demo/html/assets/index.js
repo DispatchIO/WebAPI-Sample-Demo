@@ -2,7 +2,7 @@
 var serverAddr = "https://120.26.125.181";
 var ttsServer = "https://120.26.125.181/tts";
 
-serverAddr = "https://192.168.3.118:8888";
+serverAddr = "https://120.26.125.181";
 
 /**
  * 子页面名称
