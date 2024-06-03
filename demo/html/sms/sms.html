@@ -180,7 +180,7 @@
               if (valid) {
                 const smsContacts = form.value.smsContacts
                   .split(",")
-                  .filter((e) => e.trim().length() > 0);
+                  .filter((e) => e.trim().length > 0);
                 if (smsContacts.length === 0) {
                   ElementPlus.ElMessage({
                     type: "warning",
