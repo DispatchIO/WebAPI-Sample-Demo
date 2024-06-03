@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>短信 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          短信
+        </div>
+
+        <div
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="12" class="px-2">
+            <div class="text-red-700 mb-2 text-bold">短信发送</div>
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              class="w-full"
+              :rules="rules"
+            >
+              <el-row>
+                <el-col :span="24">
+                  <div class="text-red-300 mb-2">
+                    多个号码用英文逗号分隔，实际开发需要对号码转数组处理
+                  </div>
+                  <el-form-item prop="smsContacts" label="接收号码">
+                    <el-input v-model="form.smsContacts" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item prop="smsContent" label="短信内容">
+                    <el-input
+                      type="textarea"
+                      :rows="3"
+                      v-model="form.smsContent"
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <div>
+                    <el-button type="primary" @click="handleSend">
+                      发送短信
+                    </el-button>
+                    <el-button type="danger" @click="handleSmsList">
+                      获取短信列表
+                    </el-button>
+                  </div>
+                </div>
+              </el-form-item>
+            </el-form>
+
+            <el-col class="mt-8" :span="24">
+              <div
+                class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+              >
+                短信列表
+              </div>
+              <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+                <el-col :span="6">短信ID</el-col>
+                <el-col :span="6">号码</el-col>
+                <el-col :span="8">短信内容</el-col>
+                <el-col :span="4">操作</el-col>
+              </div>
+              <template v-for="item in smsList">
+                <div class="flex items-center px-3 py-1">
+                  <el-col :span="6">{{ item.smsID }}</el-col>
+                  <el-col :span="6">{{ item.smsTo[0].split("|")[0] }}</el-col>
+                  <el-col :span="8">{{ item.smsContent }}</el-col>
+                  <el-col :span="4">
+                    <el-button type="success" @click="handleView(item)">
+                      详情
+                    </el-button>
+                    <el-button
+                      v-if="item.smsDirect ==='recv' && item.smsTo[0].split('|')[1] ==='unread'"
+                      type="primary"
+                      @click="handleRead(item)"
+                    >
+                      已读
+                    </el-button>
+                  </el-col>
+                </div>
+              </template>
+            </el-col>
+          </el-col>
+          <el-col :span="12" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex mt-3">
+              <el-input v-model="eventData" type="textarea" :rows="6" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 text-white mt-4"
+            >
+              短信详情
+            </div>
+            <div class="flex items-center bg-[#666666] h-6 px-3 text-white">
+              <el-col :span="6">短信ID</el-col>
+              <el-col :span="6">号码</el-col>
+              <el-col :span="12">短信内容</el-col>
+            </div>
+            <template v-for="item in smsDetail">
+              <div class="flex items-center px-3 py-1">
+                <el-col :span="6">{{ item.smsID }}</el-col>
+                <el-col :span="6">{{ item.smsTo[0].split("|")[0] }}</el-col>
+                <el-col :span="12">{{ item.smsContent }}</el-col>
+              </div>
+            </template>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const form = ref({
+            smsContacts: "", //号码
+            smsContent: "", //内容
+            smsType: "single",
+          });
+          const formRef = ref(null);
+          const eventData = ref();
+          const smsList = ref([]);
+          const smsDetail = ref([]);
+
+          const rules = ref({
+            smsContacts: [
+              {
+                required: true,
+                message: "请输入接收号码",
+                trigger: "blur",
+              },
+            ],
+            smsContent: [
+              {
+                required: true,
+                message: "请输入短信内容",
+                trigger: "blur",
+              },
+            ],
+          });
+
+          /**
+           * 短信发送
+           */
+          const handleSend = () => {
+            formRef.value.validate((valid, fields) => {
+              if (valid) {
+                const smsContacts = form.value.smsContacts
+                  .split(",")
+                  .filter((e) => e.trim().length() > 0);
+                if (smsContacts.length === 0) {
+                  ElementPlus.ElMessage({
+                    type: "warning",
+                    message: "号码为空",
+                    showClose: true,
+                  });
+                  return;
+                }
+                const data = { smsContent: form.value.smsContent };
+                if (smsContacts.length === 1) {
+                  data.smsContacts = contacts[0];
+                  data.smsType = "single";
+                } else {
+                  data.smsContacts = contacts;
+                  data.smsType = "group";
+                }
+
+                DispRTC.client.smsSessions
+                  .send(data)
+                  .then((res) => {
+                    handleSmsList();
+                  })
+                  .catch((err) => {
+                    console.log("handleSend err", err);
+                    ElementPlus.ElMessage({
+                      type: "warning",
+                      message: err.msg,
+                      showClose: true,
+                    });
+                  });
+              }
+            });
+          };
+
+          const handleView = (item) => {
+            DispRTC.client.smsSessions
+              .get({ smsID: item.smsID })
+              .then((res) => {
+                smsDetail.value = res.data.list;
+                console.log("handleView", smsDetail.value);
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+              });
+          };
+          const handleRead = (item) => {
+            DispRTC.client.smsSessions
+              .read({ smsID: item.smsID })
+              .then((res) => {
+                handleSmsList();
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+              });
+          };
+
+          const handleSmsList = () => {
+            DispRTC.client.smsSessions
+              .list({ beginIndex: 0, count: 10 })
+              .then((res) => {
+                smsList.value = res.data.list;
+                console.log("handleSmsList", smsList.value);
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+              });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  goToLogin();
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+            handleSmsList();
+          });
+
+          return {
+            form,
+            formRef,
+            eventData,
+            smsList,
+            rules,
+            handleSmsList,
+            handleSend,
+            handleView,
+            smsDetail,
+            handleRead,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>
