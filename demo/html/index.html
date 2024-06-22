@@ -40,13 +40,12 @@
         <div class="flex1 w-full pl-52 pr-52 overflow-y-auto">
           <div id="desc" class="text-red-500 mt-10 text-2xl">说明： <br /></div>
           <div id="desc" class="text-red-500 text-sm mb-10">
-            1.
-            该SDK需依赖axios、crypto-js和socket.io，并且socket.io只能使用2.x版本。<br />
-            2.
-            使用软电话时，需要使用https协议；如使用http协议，则需要自行配置浏览器安全设置。比如edge需打开edge://flags/#unsafely-treat-insecure-origin-as-secure<br />
-            3.
-            该DEMO仅用于展示接口的使用，不能保证流程的完整性，操作不便的地方请忽略。该DEMO也不会对所有事件和状态进行处理。<br />
-            4. 为保证软电话的正常使用，示例窗口只能打开一个。<br />
+            1.该SDK需依赖axios、crypto-js <br />
+            2.事件接收方式有两种：方式一socket.io（只能使用2.x版本）需要引入socket.io.js；方式二SSE(Server-Sent
+            Events)，只需DispRTC.createClient(options)中传入isSse=true即可使用<br />
+            3.使用软电话时，需要使用https协议；如使用http协议，则需要自行配置浏览器安全设置。比如edge需打开edge://flags/#unsafely-treat-insecure-origin-as-secure<br />
+            4.该DEMO仅用于展示接口的使用，不能保证流程的完整性，操作不便的地方请忽略。该DEMO也不会对所有事件和状态进行处理。<br />
+            5. 为保证软电话的正常使用，示例窗口只能打开一个。<br />
           </div>
           <template v-for="item in anchors" :key="item.value">
             <h1 :id="`${item.value}-demo`" class="text-4xl w-full my-6">
@@ -65,7 +64,7 @@
                     type="primary"
                     @click="handleOpen(`${item.value}/${child.value}.html`)"
                   >
-                    立即测试
+                    {{child.value == 'eventMethod' ? '查看' : '立即测试'}}
                   </el-button>
                 </el-button>
               </el-card>
@@ -86,6 +85,7 @@
               value: "basic",
               children: [
                 { label: "用户登录", value: "login" },
+                { label: "事件接收方式关键DEMO", value: "eventMethod" },
                 { label: "事件订阅", value: "eventSubscribe" },
                 { label: "软电话注册", value: "softPhone" },
                 // { label: "获取用户呼入队列", value: "callQueueList" },
@@ -211,14 +211,25 @@
            */
           const handleOpen = (name) => {
             const token = sessionStorage.getItem("DispRTC-DEMO-token") || "";
-            window.open(
-              name +
-                "?token=" +
-                encodeURIComponent(token) +
-                "&name=" +
-                encodeURIComponent(name),
-              "DispRTC-DEMO-SUB-WINDOW"
-            );
+            if (name === "basic/eventMethod.html") {
+              window.open(
+                name +
+                  "?token=" +
+                  encodeURIComponent(token) +
+                  "&name=" +
+                  encodeURIComponent(name),
+                "DispRTC-DEMO-eventMethod"
+              );
+            } else
+              window.open(
+                name +
+                  "?token=" +
+                  encodeURIComponent(token) +
+                  "&name=" +
+                  encodeURIComponent(name),
+                "DispRTC-DEMO-SUB-WINDOW"
+              );
+            // window.open(name);
           };
           /**
            * 接收子窗口消息

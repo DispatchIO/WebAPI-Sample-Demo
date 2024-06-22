@@ -151,7 +151,7 @@
 
   const Logger = new (class {
     constructor() {
-      this.logLevel = LogLevel.DEBUG;
+      this.logLevel = LogLevel.ERROR;
       this.url = void 0;
     }
 
@@ -1824,7 +1824,7 @@
       this.remoteSdp = null;
       this.setRemoteSdp = false;
 
-      this.ringbacktone = new Audio("../sounds/ringbacktone.wav");
+      this.ringbacktone = new Audio("/sounds/ringbacktone.wav");
       this.ringbacktone.autoplay = false;
       this.ringbacktone.loop = true;
       this.ringbacktone.muted = true;
@@ -1832,7 +1832,7 @@
         this.ringbacktone.muted = false;
       });
 
-      this.ringtone = new Audio("../sounds/ringtone.wav");
+      this.ringtone = new Audio("/sounds/ringtone.wav");
       this.ringtone.autoplay = false;
       this.ringtone.loop = true;
       this.ringtone.muted = true;
@@ -1892,7 +1892,9 @@
       this.WS.onmessage = (ev) => {
         var recvmsg = JSON.parse(ev.data);
 
-        this.log.info("RTCStream WS onmessage", recvmsg.type, recvmsg);
+        if (recvmsg.type !== "heart") {
+          this.log.info("RTCStream WS onmessage", recvmsg.type, recvmsg);
+        }
 
         switch (recvmsg.type) {
           case RTCStreamEventType.LOGIN:
@@ -2257,6 +2259,27 @@
       } catch (error) {}
 
       this.gotLocalMedia();
+
+      const getStats = () => {
+        try {
+          if (this.PC) {
+            this.PC.getStats()
+              .then((reports) => {
+                reports.forEach((report) => {
+                  if (report.type == "inbound-rtp" && report.kind == "video") {
+                    //获取收到的视频流状态检测信息
+                    console.log("getStats::::::", report);
+                  }
+                });
+              })
+              .catch((err) => {
+                console.log("PC.getStats", err);
+              });
+          }
+        } catch (error) {}
+      };
+
+      // setInterval(getStats, 2000)
     }
 
     hangup() {
@@ -2396,6 +2419,7 @@
 
     getMediaSucc(stream) {
       this.localStream = stream;
+      console.error("getMediaSucc", this.localStream);
       if (this.isVideo && this.localElement != null) {
         this.localElement.srcObject = stream;
         this.localElement.play();
@@ -2529,7 +2553,6 @@
         this.handleNegotiationNeededEvent.call(this, e);
       this.PC.onicecandidate = (e) => this.onicecandidateEvent.call(this, e);
       this.PC.ontrack = (e) => this.ontrackEvent.call(this, e);
-
       //录音
       this.mediaRecorder = null;
       this.recordedBlobs = [];
@@ -3169,6 +3192,7 @@
      * @param {String} userID 被叫用户ID,可选
      * @param {String} meetID 会议ID,可选
      * @param {String} meetMode 会议模式
+     * @param {Boolean} useAudio 没有视频会议时使用语音会议
      * @returns
      */
     joinMeetCall({
@@ -3177,6 +3201,7 @@
       userID,
       meetID,
       meetMode = MeetMode.AUDIO,
+      useAudio = false,
     } = {}) {
       if (Util.isEmpty(calledDevice))
         return Promise.reject(R.err("被叫号码不能为空"));
@@ -3649,7 +3674,7 @@
       if (Util.hasEmpty(called, callMode, fileName, callLoop, date, time))
         return Promise.reject("参数校验失败");
       return Util.isEmpty(taskID)
-        ? Api.CallSessions.addTimingBroadcast({
+        ? Api.CallSessions.timingbroadcast({
             called,
             callMode,
             fileName,
@@ -3959,7 +3984,7 @@
 
     /**
      * 获取主叫号码
-     * @param {Boolean} isMicro 是否为手咪，现在软电话不区分手咪
+     * @param {Boolean} isMicro 是否为手咪
      * @returns
      */
     _getAvailableTel(isMeeting = false, isMicro = false) {
@@ -3977,16 +4002,15 @@
         ? DeviceState.IDLE
         : this.client.telStatus[viceTel];
 
-      // if (isMicro) {
-      //   if (mainTelType === HandType.HAND_MICROPHONE)
-      //     return mainStatus !== DeviceState.OFFLINE ? mainTel : null;
-      //   return Util.isEmpty(viceTel) ||
-      //     viceStatus === DeviceState.OFFLINE ||
-      //     viceTelType !== HandType.HAND_MICROPHONE
-      //     ? null
-      //     : viceTel;
-      // }
-
+      if (isMicro) {
+        if (mainTelType === HandType.HAND_MICROPHONE)
+          return mainStatus !== DeviceState.OFFLINE ? mainTel : null;
+        return Util.isEmpty(viceTel) ||
+          viceStatus === DeviceState.OFFLINE ||
+          viceTelType !== HandType.HAND_MICROPHONE
+          ? null
+          : viceTel;
+      }
       if (Util.isEmpty(this.client.priorityTel)) {
         this.log.warn("_getAvailableTel isEmpty", this.client.priorityTel);
         if (Util.isEmpty(viceTel)) {
@@ -5960,9 +5984,170 @@
   };
 
   /**
-   * websocket客户端
+   * sse客户端
    */
-  class WsClient {
+  class SseClient {
+    constructor(token, client) {
+      this.token = token;
+      this.client = client;
+      this.closed = false;
+      this.heartbeatInterval = null;
+      this.connection();
+    }
+    connection() {
+      const eventSource = (this.eventSource = new EventSource(
+        `stream?token=${this.token}`
+      ));
+      eventSource.onopen = (event) => {
+        console.log("SseClient onopen", event);
+      };
+      eventSource.onmessage = (event) => {
+        if (event.data) {
+          try {
+            const data = JSON.parse(event.data);
+            // console.log("SseClient onmessage", data.eventType, data);
+            if (DispRTC.client && DispRTC.client === this.client) {
+              //token错误，客户端重登
+              if (data && data.code === 403) {
+                this.client.log.warn(
+                  "SseClient message token错误，客户端重登",
+                  data
+                );
+                clearCLient(403);
+                return;
+              }
+              this.client.emit(data.eventType, data);
+              this.handleMsg(data);
+            } else {
+              this.close();
+            }
+          } catch (e) {}
+        }
+      };
+      eventSource.onerror = (es, event) => {
+        try {
+          this.close();
+        } catch (e) {}
+        console.log("SseClient onerror 发生错误重新连接", event);
+        this.connection();
+      };
+    }
+
+    handleMsg(data) {
+      switch (data.eventType) {
+        case EventType.LOGIN_STATUS:
+          this.handleLoginStatus(data);
+          break;
+        case EventType.AGENT_STATUS_EVENT:
+          this.handleAgentStatus(data, this.client);
+          break;
+        case EventType.CALL_CONN_STATUS_EVENT:
+          this.handleDeviceStatus(data);
+          break;
+        case EventType.OPERATOR_EVENT_MOD:
+          // if (
+          //   this.client.operatorInfo &&
+          //   data.data.operatorID === this.client.operatorInfo.operatorID
+          // ) {
+          //   await this.client._getOperatorInfo(true, true);
+          // }
+          break;
+        case EventType.MEET_MEMBER_EVENT_DEL:
+          this.client.conferenceRoom.meetingCalling.delete(data.data.meetID);
+          break;
+      }
+    }
+
+    handleLoginStatus(data) {
+      //已在其他地方登录
+      if (data.data.code === 480) {
+        clearCLient(480);
+      }
+    }
+
+    handleAgentStatus(data, client) {
+      data = data.data;
+      if (client && client.operatorInfo?.operatorID) {
+        if (data.agentState === AgentState.STOP) {
+          client.connectionState = {
+            user_id: data.user_id,
+            agentState: ConnectionAgentState.CONNECTED_WORKSTOP,
+          };
+        } else if (data.agentState === AgentState.LOGIN) {
+          client.connectionState = {
+            user_id: data.user_id,
+            agentState: ConnectionAgentState.CONNECTED_WORKSTART,
+          };
+        } else if (data.agentState === AgentState.WORKING_AFTER_CALL) {
+          client.connectionState = {
+            user_id: data.user_id,
+            agentState: ConnectionAgentState.CONNECTED_WORKAFTERCALL,
+            unattendDevice: data.unattendDevice,
+          };
+        }
+      }
+    }
+
+    handleDeviceStatus(data) {
+      data = data.data;
+      let { localDevice, localState, direct } = data;
+      let { mainTel, viceTel, viceTelType } = this.client.operatorInfo;
+      if (
+        !Util.isEmpty(localDevice) &&
+        (localDevice === mainTel || localDevice === viceTel)
+      ) {
+        this.client.telStatus[localDevice] = localState;
+
+        let mainStatus = Util.isEmpty(this.client.telStatus[mainTel])
+          ? DeviceState.IDLE
+          : this.client.telStatus[mainTel];
+        let viceStatus = Util.isEmpty(this.client.telStatus[viceTel])
+          ? DeviceState.IDLE
+          : this.client.telStatus[viceTel];
+        if (localDevice === mainTel) {
+          //拨打接入号，切换手柄
+          if (direct === "callin" && localState === DeviceState.HOLD) {
+            this.client.priorityTel = mainTel;
+          } else if (localState === DeviceState.OFFLINE) {
+            if (!Util.isEmpty(viceTel) && viceStatus !== DeviceState.OFFLINE) {
+              this.client.priorityTel = viceTel;
+            }
+          } else if (localState === DeviceState.IDLE) {
+            if (![DeviceState.IDLE, DeviceState.OFFLINE].includes(viceStatus)) {
+              this.client.priorityTel = viceTel;
+            } else {
+              this.client.priorityTel = mainTel;
+            }
+          }
+        } else if (!Util.isEmpty(viceTel) && localDevice === viceTel) {
+          //拨打接入号，切换手柄
+          if (direct === "callin" && localState === DeviceState.HOLD) {
+            this.client.priorityTel = viceTel;
+          } else if (localState === DeviceState.OFFLINE) {
+            this.client.priorityTel = mainTel;
+          } else if (localState === DeviceState.IDLE) {
+            if (mainStatus !== DeviceState.OFFLINE) {
+              this.client.priorityTel = mainTel;
+            } else {
+              this.client.priorityTel = viceTel;
+            }
+          }
+        }
+      }
+    }
+
+    close() {
+      console.log("关闭eventSource");
+      try {
+        this.eventSource && this.eventSource.close();
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * socketio客户端
+   */
+  class SocketIoClient {
     static instances = new Map();
 
     constructor(token, client) {
@@ -6190,11 +6375,12 @@
       this.softPhoneServer = this.server.startsWith("http:")
         ? this.server.replace("http:", "ws:")
         : this.server.replace("https:", "wss:");
+      this.isSse = options.isSse ?? false;
 
       this.token = options.token || Store.get("token"); //登录后token
       this.singleSignOn = options.singleSignOn ?? false; //是否为单点登录
       this.keepalive = options.keepalive ?? true;
-      this.registerSoftphone = options.registerSoftphone ?? true; //是否注册软电话
+      this.registerSoftphone = options.registerSoftphone ?? true;
       this.reLogin = this.keepalive !== false; //是否重登录
 
       this.isReLogining = false; //是否正在重登录
@@ -6794,21 +6980,24 @@
      * 初始化数据
      * @returns
      */
-    async _initData(openWs = true) {
+    async _initData(initStatus = true) {
       if (!this._isLogin()) {
         return;
       }
       //获取用户信息
-      this._getOperatorInfo(true, !openWs);
+      this._getOperatorInfo(true, !initStatus);
       //获取系统默认会议
       this.conferenceRoom._initData();
 
       !DispRTC.client && (DispRTC.client = this);
       //开启websocket
-      this.server &&
-        openWs &&
-        (this.wsClient = new WsClient(this.token, this).connection());
-
+      if (this.server && initStatus) {
+        if (this.isSse) {
+          this.wsClient = new SseClient(this.token, this);
+        } else {
+          this.wsClient = new SocketIoClient(this.token, this).connection();
+        }
+      }
       //保活
       this.keepalive && Timer.keepalive(this);
     }

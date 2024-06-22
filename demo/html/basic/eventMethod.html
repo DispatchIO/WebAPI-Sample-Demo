@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>事件接收方式关键DEMO -- Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          事件接收方式关键DEMO
+        </div>
+
+        <div
+          class="flex1 w-full pl-52 pr-52 pt-4 overflow-y-auto flex flex-col"
+        >
+          <el-tabs class="w-full w-full" v-model="activeName" type="card">
+            <el-tab-pane label="SocketIO方式" name="socketio">
+              <div class="h-10 flex items-center px-4 text-sm text-red-500">
+                使用socketio方式接收事件，需要引入socket.io.js-2.x版本
+              </div>
+              <div class="h-10 flex items-center px-4 text-xl font-bold">
+                示例代码
+              </div>
+              <div class="w-full mt-6">
+                <el-input v-model="socketioDemo" type="textarea" :rows="10" />
+              </div>
+              <el-button type="primary" @click="handleLog">打印</el-button>
+            </el-tab-pane>
+            <el-tab-pane label="SSE方式" name="sse">
+              <div class="h-10 flex items-center px-4 text-sm text-red-500">
+                使用SSE(Server-Sent Events)方式接收事件
+              </div>
+              <div class="h-10 flex items-center px-4 text-xl font-bold">
+                示例代码
+              </div>
+              <div class="w-full mt-6">
+                <el-input v-model="sseDemo" type="textarea" :rows="10" />
+              </div>
+              <el-button type="primary" @click="handleLog">打印</el-button>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const activeName = ref("socketio");
+
+          const socketioDemo =
+            ref(`const socketioClient = io("https://127.0.0.1", {transports: ["websocket"], path: "/socket.io", query: {token: "登录返回的access_token"}});
+socketioClient.on("connect", (event) => {console.log("连接状态事件")});
+socketioClient.on("disconnect", (event) => {console.log("断开连接状态事件")});
+socketioClient.on("error", (event) => {console.log("连接错误")});
+socketioClient.on("message", (event) => {console.log("消息事件")}); 
+//token为登录时返回的access_token, 状态事件都在这里监听到
+socketioClient.on(token, (data) => {console.log("收到的状态事件"， data)});  `);
+
+          const sseDemo =
+            ref(`socketioDemo const eventSource = new EventSource("https://127.0.1/stream?token=" + access_token);
+eventSource.onopen = (event) => {console.log("SseClient连接打开", event)};
+eventSource.onerror = (event) => {console.log("SseClient连接错误", event)};
+//接收的事件在这里接收
+eventSource.onmessage = (event) => {console.log("SseClient收到服务端消息", event.data)};`);
+
+          const handleLog = () => {
+            console.log("socketioDemo", sseDemo.value);
+          };
+
+          onBeforeMount(() => {});
+
+          return { activeName, socketioDemo, sseDemo, handleLog };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

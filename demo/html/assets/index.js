@@ -22,6 +22,7 @@ const sendMsgToOpener = (data = {}) => {
  *
  */
 const handleAddListener = () => {
+  console.log("addListener");
   //关闭或刷新时触发
   window.addEventListener("beforeunload", () =>
     sendMsgToOpener({
@@ -78,6 +79,7 @@ const initData = () => {
   var client = DispRTC.createClient({
     server: serverAddr,
     token: token,
+    // isSse: true, //使用SSE方式接收状态事件时，需要设置isSse为true
   });
 
   handleAddListener();
