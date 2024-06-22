@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>获取用户号码状态 Dispatch WebSDK API</title>
+
+    <link rel="stylesheet" href="../assets/styles/index.css" />
+    <link rel="stylesheet" href="../assets/js/element-plus/index.css" />
+    <script src="../assets/js/flexible.js"></script>
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/element-plus/index.js"></script>
+    <script src="../assets/js/tailwindcss.js"></script>
+
+    <!-- 导入axios依赖包-->
+    <script src="../assets/js/axios.min.js"></script>
+    <!-- socket.io依赖 -->
+    <script src="../assets/js/socket.io.js"></script>
+    <!-- sdk-->
+    <script src="../sdk/dispatch-sdk.js"></script>
+    <!-- 配置文件-->
+    <script src="../assets/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="w-full h-full flex flex-col overflow-hidden">
+        <div
+          class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
+        >
+          获取用户号码状态
+        </div>
+
+        <div
+          class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
+        >
+          <el-col :span="8" class="px-2">
+            <el-form
+              ref="formRef"
+              :model="form"
+              label-width="auto"
+              class="w-full"
+            >
+              <div>多个号码用英文逗号分隔，实际开发需要对号码转数组处理</div>
+              <el-form-item prop="localDevices" label="号码">
+                <el-input v-model="form.localDevices" />
+              </el-form-item>
+              <el-form-item prop="beginIndex" label="分页起始行">
+                <el-input-number
+                  v-model="form.beginIndex"
+                  :min="0"
+                  :precision="0"
+                  step-strictly
+                />
+              </el-form-item>
+              <el-form-item prop="count" label="页数量">
+                <el-input-number
+                  v-model="form.count"
+                  :min="10"
+                  :precision="0"
+                  :step="10"
+                  step-strictly
+                />
+              </el-form-item>
+
+              <el-form-item>
+                <div class="w-full flex flex-nowrap justify-between">
+                  <el-button @click="handleQuery" type="primary"
+                    >查询</el-button
+                  >
+                </div>
+              </el-form-item>
+            </el-form>
+          </el-col>
+          <el-col :span="16" class="px-2">
+            <div class="flex items-center bg-[#52575c] h-10 px-3 text-white">
+              订阅事件
+            </div>
+            <div class="flex">
+              <el-input v-model="listData" type="textarea" :rows="10" />
+            </div>
+            <div
+              class="flex items-center bg-[#52575c] h-10 px-3 mt-4 text-white"
+            >
+              <el-col :span="6">号码</el-col>
+              <el-col :span="6">状态</el-col>
+              <el-col :span="12">用户ID</el-col>
+            </div>
+            <template v-for="item in listData">
+              <div class="flex items-center px-3 my-1">
+                <el-col :span="6">{{ item.localDevice }}</el-col>
+                <el-col :span="6">{{ item.localState }}</el-col>
+                <el-col :span="12">{{ item.userID }}</el-col>
+              </div>
+            </template>
+          </el-col>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, onBeforeMount } = Vue;
+
+      createApp({
+        setup() {
+          const eventData = ref();
+          const form = ref({
+            beginIndex: 0, //分页起始行
+            count: 20, //页数量
+          });
+          const formRef = ref(null);
+          const listData = ref([]);
+
+          /**
+           * 获取号码状态
+           */
+          const handleQuery = () => {
+            const data = {
+              count: form.value.count,
+              beginIndex: form.value.beginIndex,
+            };
+            if (form.value.localDevices) {
+              const localDevices = form.value.localDevices
+                .split(",")
+                .filter((e) => e.trim().length);
+              if (localDevices.length > 0) {
+                data.localDevices = localDevices;
+              }
+            }
+
+            DispRTC.client.callSessions
+              .getCallConnStatusList(data)
+              .then((res) => {
+                console.log("getCallConnStatusList", res.data);
+                listData.value = res.data.list;
+              })
+              .catch((err) => {
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: err.msg,
+                  showClose: true,
+                });
+                listData.value = [];
+              });
+          };
+
+          //事件处理
+          const handleEvent = ({ data, eventType }) => {
+            console.log("handleEvent", eventType, data);
+            eventData.value = JSON.stringify({ data, eventType });
+
+            switch (eventType) {
+              case "LoginStatus":
+                ElementPlus.ElMessage.closeAll();
+                ElementPlus.ElMessage({
+                  type: "warning",
+                  message: data.msg,
+                });
+                //403认证失败 480用户已在其他地方登录
+                if ([403, 480].includes(data.code)) {
+                  goToLogin();
+                }
+                break;
+            }
+          };
+
+          // 订阅事件
+          const subscribeEvent = () => {
+            //可以针对特定的事件，也可以针对所有事件，这里订阅所有事件
+            DispRTC.client.on("All", handleEvent);
+          };
+
+          onBeforeMount(() => {
+            subscribeEvent();
+          });
+
+          return {
+            eventData,
+            form,
+            formRef,
+            handleQuery,
+            listData,
+          };
+        },
+      })
+        .use(ElementPlus)
+        .mount("#app");
+    </script>
+  </body>
+</html>

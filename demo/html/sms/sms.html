@@ -29,14 +29,14 @@
         <div
           class="h-10 flex items-center px-4 text-white text-sm bg-[#52575c]"
         >
-          打开视频监控
+          短信
         </div>
 
         <div
           class="flex1 w-full px-10 pt-4 overflow-y-auto flex justify-center flex-nowrap"
         >
           <el-col :span="12" class="px-2">
-            <div class="text-red-500 mb-2">短信发送</div>
+            <div class="text-red-700 mb-2 text-bold">短信发送</div>
             <el-form
               ref="formRef"
               :model="form"
@@ -46,6 +46,9 @@
             >
               <el-row>
                 <el-col :span="24">
+                  <div class="text-red-300 mb-2">
+                    多个号码用英文逗号分隔，实际开发需要对号码转数组处理
+                  </div>
                   <el-form-item prop="smsContacts" label="接收号码">
                     <el-input v-model="form.smsContacts" />
                   </el-form-item>
@@ -175,8 +178,28 @@
           const handleSend = () => {
             formRef.value.validate((valid, fields) => {
               if (valid) {
+                const smsContacts = form.value.smsContacts
+                  .split(",")
+                  .filter((e) => e.trim().length > 0);
+                if (smsContacts.length === 0) {
+                  ElementPlus.ElMessage({
+                    type: "warning",
+                    message: "号码为空",
+                    showClose: true,
+                  });
+                  return;
+                }
+                const data = { smsContent: form.value.smsContent };
+                if (smsContacts.length === 1) {
+                  data.smsContacts = contacts[0];
+                  data.smsType = "single";
+                } else {
+                  data.smsContacts = contacts;
+                  data.smsType = "group";
+                }
+
                 DispRTC.client.smsSessions
-                  .send(form.value)
+                  .send(data)
                   .then((res) => {
                     handleSmsList();
                   })
