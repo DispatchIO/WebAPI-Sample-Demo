@@ -71,7 +71,7 @@ socketioClient.on("message", (event) => {console.log("消息事件")});
 socketioClient.on(token, (data) => {console.log("收到的状态事件"， data)});  `);
 
           const sseDemo =
-            ref(`socketioDemo const eventSource = new EventSource("https://127.0.1/stream?token=" + access_token);
+            ref(`const eventSource = new EventSource("https://127.0.1/stream?token=" + access_token);
 eventSource.onopen = (event) => {console.log("SseClient连接打开", event)};
 eventSource.onerror = (event) => {console.log("SseClient连接错误", event)};
 //接收的事件在这里接收
