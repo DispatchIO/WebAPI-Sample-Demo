@@ -203,3 +203,18 @@ server {
 }
 ```
 
+
+## dispatch-sdk.js的初始化配置
+
+详情请看`demo/html/assets/index.js`
+
+```javascript
+var serverAddr = "https://192.168.1.10:2443"; # 配置nginx配置的服务器和端口
+
+//创建sdk客户端
+var client = DispRTC.createClient({
+    proxy: true, // 是否为代理服务器
+    server: serverAddr, // 服务器地址
+    token: token, //token = JSON.parse(sessionStorage.getItem("DispRTC-token")).content; sdk的token
+});
+```
